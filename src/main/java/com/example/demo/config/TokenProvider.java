@@ -2,7 +2,6 @@ package com.example.demo.config;
 
 import com.example.demo.entity.User;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.nimbusds.jose.proc.SecurityContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,8 +34,7 @@ public class TokenProvider {
       @Value("${app.security.jwt-expiration-hours:12}") long expirationHours) {
     this.secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     this.jwtEncoder = new NimbusJwtEncoder(new ImmutableSecret<>(secretKey));
-    this.jwtDecoder =
-        NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(ALGORITHM).build();
+    this.jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(ALGORITHM).build();
     this.expirationHours = expirationHours;
   }
 

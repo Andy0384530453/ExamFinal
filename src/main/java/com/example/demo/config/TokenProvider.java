@@ -42,7 +42,7 @@ public class TokenProvider {
     Instant now = Instant.now();
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
-            .subject(user.getId())
+            .subject(user.getId().toString())
             .claim("role", user.getRole().name())
             .issuedAt(now)
             .expiresAt(now.plus(Duration.ofHours(expirationHours)))

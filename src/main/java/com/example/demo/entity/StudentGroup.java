@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,13 +12,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public class StudentGroup {
-  @Id private String id;
+  @Id private UUID id;
 
   @Column(nullable = false)
-  private String studentId;
+  private UUID studentId;
 
   @Column(nullable = false)
-  private String groupId;
+  private UUID groupId;
 
   @Column(nullable = false)
   private Instant startDate;

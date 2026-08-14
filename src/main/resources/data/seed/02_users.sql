@@ -13,4 +13,6 @@ values
     ('22222222-0000-0000-0000-000000000011', 'REF-STU-7', 'Nathan', 'Roux', 'nathan.roux@school.com', 'STUDENT'),
     ('22222222-0000-0000-0000-000000000012', 'REF-STU-8', 'Manon', 'Fontaine', 'manon.fontaine@school.com', 'STUDENT'),
     ('22222222-0000-0000-0000-000000000013', 'REF-STU-9', 'Gabriel', 'Mercier', 'gabriel.mercier@school.com', 'STUDENT'),
-    ('22222222-0000-0000-0000-000000000014', 'REF-STU-10', 'Louise', 'Laurent', 'louise.laurent@school.com', 'STUDENT');
+    ('22222222-0000-0000-0000-000000000014', 'REF-STU-10', 'Louise', 'Laurent', 'louise.laurent@school.com', 'STUDENT'),
+    ('22222222-0000-0000-0000-000000000015', 'REF-STU-11', 'Andy', 'Andrianasolo', 'hei.andy.100@gmail.com', 'STUDENT'),
+    ('22222222-0000-0000-0000-000000000016', 'REF-STU-12', 'Andy', 'Andrianasolo', 'andrianasoloandy164@gmail.com', 'STUDENT');

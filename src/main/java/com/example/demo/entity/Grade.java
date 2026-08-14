@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,13 +12,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Grade {
-  @Id private String id;
+  @Id private UUID id;
 
   @Column(nullable = false)
-  private String studentId;
+  private UUID studentId;
 
   @Column(nullable = false)
-  private String examId;
+  private UUID examId;
 
   @Column(nullable = false)
   private Double value;
@@ -28,5 +29,5 @@ public class Grade {
   private Instant modifiedAt;
 
   @Column(nullable = false)
-  private String modifiedBy;
+  private UUID modifiedBy;
 }

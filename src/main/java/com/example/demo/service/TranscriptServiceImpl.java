@@ -3,9 +3,9 @@ package com.example.demo.service;
 import com.example.demo.config.TokenProvider;
 import com.example.demo.dto.transcript.TranscriptItemResponse;
 import com.example.demo.dto.transcript.TranscriptResponse;
-import com.example.demo.entity.Course;
-import com.example.demo.entity.Exam;
-import com.example.demo.entity.Grade;
+import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
+import com.example.demo.endpoint.event.EventProducer;
+import com.example.demo.endpoint.event.model.TranscriptEmailRequested;
 import com.example.demo.entity.Transcript;
 import com.example.demo.entity.TranscriptItem;
 import com.example.demo.entity.User;
@@ -13,13 +13,9 @@ import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.TranscriptMapper;
-import com.example.demo.repository.CourseRepository;
-import com.example.demo.repository.ExamRepository;
-import com.example.demo.repository.GradeRepository;
 import com.example.demo.repository.PromotionRepository;
 import com.example.demo.repository.TranscriptRepository;
 import com.example.demo.repository.UserRepository;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,29 +29,26 @@ public class TranscriptServiceImpl implements TranscriptService {
   private final TokenProvider tokenProvider;
   private final UserRepository userRepository;
   private final PromotionRepository promotionRepository;
-  private final GradeRepository gradeRepository;
-  private final ExamRepository examRepository;
-  private final CourseRepository courseRepository;
   private final TranscriptRepository transcriptRepository;
   private final TranscriptMapper transcriptMapper;
+  private final TranscriptDataBuilder transcriptDataBuilder;
+  private final EventProducer<TranscriptEmailRequested> eventProducer;
 
   public TranscriptServiceImpl(
       TokenProvider tokenProvider,
       UserRepository userRepository,
       PromotionRepository promotionRepository,
-      GradeRepository gradeRepository,
-      ExamRepository examRepository,
-      CourseRepository courseRepository,
       TranscriptRepository transcriptRepository,
-      TranscriptMapper transcriptMapper) {
+      TranscriptMapper transcriptMapper,
+      TranscriptDataBuilder transcriptDataBuilder,
+      EventProducer<TranscriptEmailRequested> eventProducer) {
     this.tokenProvider = tokenProvider;
     this.userRepository = userRepository;
     this.promotionRepository = promotionRepository;
-    this.gradeRepository = gradeRepository;
-    this.examRepository = examRepository;
-    this.courseRepository = courseRepository;
     this.transcriptRepository = transcriptRepository;
     this.transcriptMapper = transcriptMapper;
+    this.transcriptDataBuilder = transcriptDataBuilder;
+    this.eventProducer = eventProducer;
   }
 
   @Override
@@ -64,11 +57,30 @@ public class TranscriptServiceImpl implements TranscriptService {
     checkStudentExists(studentId);
     checkPromotionExists(promotionId);
 
-    List<TranscriptItem> items = buildItems(studentId, promotionId);
+    List<TranscriptItem> items = transcriptDataBuilder.buildItems(studentId, promotionId);
     Transcript transcript = resolveTranscript(studentId, promotionId);
     List<TranscriptItemResponse> itemResponses =
         items.stream().map(transcriptMapper::toItemResponse).toList();
     return transcriptMapper.toResponse(transcript, itemResponses);
+  }
+
+  @Override
+  public TranscriptSendEmailResponse requestTranscriptEmail(UUID studentId, Jwt jwt) {
+    checkAccess(studentId, jwt);
+    User student = findStudentOrThrow(studentId);
+
+    Transcript transcript = resolveTranscript(studentId, null);
+    transcript.setStatus(TranscriptStatus.PENDING);
+    transcript.setEmail(student.getEmail());
+    transcriptRepository.save(transcript);
+
+    eventProducer.accept(
+        List.of(TranscriptEmailRequested.builder().transcriptId(transcript.getId()).build()));
+
+    return new TranscriptSendEmailResponse(
+        transcript.getId(),
+        TranscriptStatus.PENDING,
+        "Processing in progress, the transcript will be sent by email.");
   }
 
   private void checkAccess(UUID studentId, Jwt jwt) {
@@ -87,45 +99,21 @@ public class TranscriptServiceImpl implements TranscriptService {
   }
 
   private void checkStudentExists(UUID studentId) {
-    Optional<User> student = userRepository.findById(studentId);
-    if (student.isEmpty() || student.get().getRole() != Role.STUDENT) {
-      throw new ResourceNotFoundException("Student not found with id: " + studentId);
-    }
+    findStudentOrThrow(studentId);
+  }
+
+  private User findStudentOrThrow(UUID studentId) {
+    return userRepository
+        .findById(studentId)
+        .filter(user -> user.getRole() == Role.STUDENT)
+        .orElseThrow(
+            () -> new ResourceNotFoundException("Student not found with id: " + studentId));
   }
 
   private void checkPromotionExists(UUID promotionId) {
     if (promotionId != null && !promotionRepository.existsById(promotionId)) {
       throw new ResourceNotFoundException("Promotion not found with id: " + promotionId);
     }
-  }
-
-  private List<TranscriptItem> buildItems(UUID studentId, UUID promotionId) {
-    return gradeRepository.findByStudentId(studentId).stream()
-        .flatMap(grade -> toTranscriptItem(grade, promotionId).stream())
-        .sorted(Comparator.comparing(TranscriptItem::getExamDate))
-        .toList();
-  }
-
-  private Optional<TranscriptItem> toTranscriptItem(Grade grade, UUID promotionId) {
-    Optional<Exam> exam = examRepository.findById(grade.getExamId());
-    if (exam.isEmpty()) {
-      return Optional.empty();
-    }
-    Optional<Course> course = courseRepository.findById(exam.get().getCourseId());
-    if (course.isEmpty()) {
-      return Optional.empty();
-    }
-    Course courseValue = course.get();
-    if (promotionId != null && !promotionId.equals(courseValue.getPromotionId())) {
-      return Optional.empty();
-    }
-    TranscriptItem item = new TranscriptItem();
-    item.setCourseTitle(courseValue.getTitle());
-    item.setExamDate(exam.get().getDateExam());
-    item.setCoefficient(exam.get().getCoefficient());
-    item.setGrade(grade.getValue());
-    item.setCredits(courseValue.getCredits());
-    return Optional.of(item);
   }
 
   private Transcript resolveTranscript(UUID studentId, UUID promotionId) {

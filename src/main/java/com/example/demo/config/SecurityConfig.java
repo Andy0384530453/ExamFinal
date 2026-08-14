@@ -76,6 +76,8 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             authorize ->
                 authorize
+                    .requestMatchers(HttpMethod.POST, "/students/{id}/transcript/send-email")
+                    .hasAnyRole("ADMIN", "STUDENT")
                     .requestMatchers(HttpMethod.GET, "/students/{id}/transcript")
                     .hasAnyRole("ADMIN", "STUDENT")
                     .anyRequest()

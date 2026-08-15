@@ -1,4 +1,5 @@
 -- Drop and recreate all domain tables with uuid id columns (dev seed only)
+drop table if exists transcript;
 drop table if exists grade_modification;
 drop table if exists grade;
 drop table if exists student_group;
@@ -95,4 +96,15 @@ create table grade_modification
     new_value   double precision not null,
     old_value   double precision not null,
     reason      varchar(255) not null
+);
+
+create table transcript
+(
+    id           uuid not null primary key,
+    student_id   uuid not null,
+    promotion_id uuid,
+    status       varchar(255) not null,
+    pdf_url      varchar(255),
+    email        varchar(255),
+    generated_at timestamp with time zone
 );

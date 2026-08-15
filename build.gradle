@@ -153,6 +153,11 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.2'
     testImplementation 'org.junit-pioneer:junit-pioneer:2.2.0'
 
+    implementation 'org.springframework.boot:spring-boot-starter-security:3.2.2'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.2.2'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.2.2'
+    implementation 'org.apache.poi:poi:5.2.5'
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
 
 }

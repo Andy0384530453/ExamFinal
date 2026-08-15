@@ -1,34 +1,36 @@
 package com.example.demo.entity;
 
-import com.example.demo.enums.TranscriptStatus;
+import com.example.demo.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import java.time.Instant;
+import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
+@Table(name = "user")
 @Getter
 @Setter
-public class Transcript {
+public class JUser {
   @Id private UUID id;
 
   @Column(nullable = false)
-  private UUID studentId;
+  private String ref;
 
-  private UUID promotionId;
+  @Column(nullable = false)
+  private String firstName;
+
+  @Column(nullable = false)
+  private String lastName;
+
+  @Column(nullable = false, unique = true)
+  private String email;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
-  private TranscriptStatus status = TranscriptStatus.PENDING;
-
-  private String pdfUrl;
-
-  private String email;
-
-  private Instant generatedAt;
+  private Role role;
 }

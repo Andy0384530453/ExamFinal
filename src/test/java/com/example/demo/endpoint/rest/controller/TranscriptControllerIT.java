@@ -5,21 +5,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.demo.conf.FacadeIT;
 import com.example.demo.config.TokenProvider;
 import com.example.demo.dto.transcript.TranscriptResponse;
-import com.example.demo.entity.Course;
-import com.example.demo.entity.Exam;
-import com.example.demo.entity.Grade;
-import com.example.demo.entity.Promotion;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JCourse;
+import com.example.demo.entity.JExam;
+import com.example.demo.entity.JGrade;
+import com.example.demo.entity.JPromotion;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ErrorResponse;
-import com.example.demo.repository.CourseRepository;
-import com.example.demo.repository.ExamRepository;
-import com.example.demo.repository.GradeRepository;
-import com.example.demo.repository.PromotionRepository;
-import com.example.demo.repository.TranscriptRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.JCourseRepository;
+import com.example.demo.repository.JExamRepository;
+import com.example.demo.repository.JGradeRepository;
+import com.example.demo.repository.JPromotionRepository;
+import com.example.demo.repository.JTranscriptRepository;
+import com.example.demo.repository.JUserRepository;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -37,21 +37,21 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Autowired private TestRestTemplate restTemplate;
   @Autowired private TokenProvider tokenProvider;
-  @Autowired private UserRepository userRepository;
-  @Autowired private PromotionRepository promotionRepository;
-  @Autowired private CourseRepository courseRepository;
-  @Autowired private ExamRepository examRepository;
-  @Autowired private GradeRepository gradeRepository;
-  @Autowired private TranscriptRepository transcriptRepository;
+  @Autowired private JUserRepository userRepository;
+  @Autowired private JPromotionRepository promotionRepository;
+  @Autowired private JCourseRepository courseRepository;
+  @Autowired private JExamRepository examRepository;
+  @Autowired private JGradeRepository gradeRepository;
+  @Autowired private JTranscriptRepository transcriptRepository;
 
   @Test
   void admin_can_access_any_student_transcript() {
-    User student = student();
-    Promotion promotion = promotion();
-    Course course = course(promotion, "Mathematiques", 6);
-    Exam exam = exam(course, "2023-11-15T09:00:00Z", 1.5);
+    JUser student = student();
+    JPromotion promotion = promotion();
+    JCourse course = course(promotion, "Mathematiques", 6);
+    JExam exam = exam(course, "2023-11-15T09:00:00Z", 1.5);
     grade(student, exam, 14.5);
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<TranscriptResponse> response =
         getTranscript(token(admin), student.getId(), null);
@@ -70,7 +70,7 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void student_can_access_own_transcript() {
-    User student = student();
+    JUser student = student();
     ResponseEntity<TranscriptResponse> response =
         getTranscript(token(student), student.getId(), null);
 
@@ -81,8 +81,8 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void student_cannot_access_another_student_transcript() {
-    User student = student();
-    User otherStudent = student();
+    JUser student = student();
+    JUser otherStudent = student();
 
     ResponseEntity<ErrorResponse> response =
         getTranscriptError(token(student), otherStudent.getId(), null);
@@ -93,7 +93,7 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void unknown_student_returns_404() {
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<ErrorResponse> response =
         getTranscriptError(token(admin), UUID.randomUUID(), null);
@@ -104,8 +104,8 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void unknown_promotion_returns_404() {
-    User admin = admin();
-    User student = student();
+    JUser admin = admin();
+    JUser student = student();
 
     ResponseEntity<ErrorResponse> response =
         getTranscriptError(token(admin), student.getId(), UUID.randomUUID());
@@ -116,12 +116,12 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void without_promotion_transcript_contains_all_grades() {
-    User student = student();
-    Promotion promotionA = promotion();
-    Promotion promotionB = promotion();
+    JUser student = student();
+    JPromotion promotionA = promotion();
+    JPromotion promotionB = promotion();
     grade(student, exam(course(promotionA, "Maths 2023", 6), "2023-11-15T09:00:00Z", 1.0), 12.0);
     grade(student, exam(course(promotionB, "Physique 2024", 5), "2024-11-15T09:00:00Z", 1.0), 14.0);
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<TranscriptResponse> response =
         getTranscript(token(admin), student.getId(), null);
@@ -138,12 +138,12 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void with_promotion_transcript_is_filtered() {
-    User student = student();
-    Promotion promotionA = promotion();
-    Promotion promotionB = promotion();
+    JUser student = student();
+    JPromotion promotionA = promotion();
+    JPromotion promotionB = promotion();
     grade(student, exam(course(promotionA, "Maths 2023", 6), "2023-11-15T09:00:00Z", 1.0), 12.0);
     grade(student, exam(course(promotionB, "Physique 2024", 5), "2024-11-15T09:00:00Z", 1.0), 14.0);
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<TranscriptResponse> response =
         getTranscript(token(admin), student.getId(), promotionA.getId());
@@ -158,8 +158,8 @@ class TranscriptControllerIT extends FacadeIT {
 
   @Test
   void reuses_persisted_transcript_information() {
-    User student = student();
-    Transcript persisted = new Transcript();
+    JUser student = student();
+    JTranscript persisted = new JTranscript();
     persisted.setId(UUID.randomUUID());
     persisted.setStudentId(student.getId());
     persisted.setPromotionId(null);
@@ -168,7 +168,7 @@ class TranscriptControllerIT extends FacadeIT {
     persisted.setEmail("student@school.com");
     persisted.setGeneratedAt(Instant.parse("2024-01-01T10:00:00Z"));
     transcriptRepository.save(persisted);
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<TranscriptResponse> response =
         getTranscript(token(admin), student.getId(), null);
@@ -214,20 +214,20 @@ class TranscriptControllerIT extends FacadeIT {
     return restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), responseType);
   }
 
-  private String token(User user) {
+  private String token(JUser user) {
     return tokenProvider.generateToken(user);
   }
 
-  private User student() {
+  private JUser student() {
     return user(Role.STUDENT);
   }
 
-  private User admin() {
+  private JUser admin() {
     return user(Role.ADMIN);
   }
 
-  private User user(Role role) {
-    User user = new User();
+  private JUser user(Role role) {
+    JUser user = new JUser();
     user.setId(UUID.randomUUID());
     user.setRef("REF-" + UUID.randomUUID());
     user.setFirstName("First");
@@ -237,16 +237,16 @@ class TranscriptControllerIT extends FacadeIT {
     return userRepository.save(user);
   }
 
-  private Promotion promotion() {
-    Promotion promotion = new Promotion();
+  private JPromotion promotion() {
+    JPromotion promotion = new JPromotion();
     promotion.setId(UUID.randomUUID());
     promotion.setRef("P-" + UUID.randomUUID());
     promotion.setYear(2024);
     return promotionRepository.save(promotion);
   }
 
-  private Course course(Promotion promotion, String title, int credits) {
-    Course course = new Course();
+  private JCourse course(JPromotion promotion, String title, int credits) {
+    JCourse course = new JCourse();
     course.setId(UUID.randomUUID());
     course.setRef("C-" + UUID.randomUUID());
     course.setTitle(title);
@@ -255,8 +255,8 @@ class TranscriptControllerIT extends FacadeIT {
     return courseRepository.save(course);
   }
 
-  private Exam exam(Course course, String date, double coefficient) {
-    Exam exam = new Exam();
+  private JExam exam(JCourse course, String date, double coefficient) {
+    JExam exam = new JExam();
     exam.setId(UUID.randomUUID());
     exam.setRef("E-" + UUID.randomUUID());
     exam.setCourseId(course.getId());
@@ -265,8 +265,8 @@ class TranscriptControllerIT extends FacadeIT {
     return examRepository.save(exam);
   }
 
-  private void grade(User student, Exam exam, double value) {
-    Grade grade = new Grade();
+  private void grade(JUser student, JExam exam, double value) {
+    JGrade grade = new JGrade();
     grade.setId(UUID.randomUUID());
     grade.setStudentId(student.getId());
     grade.setExamId(exam.getId());

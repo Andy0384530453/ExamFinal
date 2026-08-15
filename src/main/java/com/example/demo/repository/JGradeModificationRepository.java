@@ -1,9 +1,9 @@
 package com.example.demo.repository;
 
-import com.example.demo.entity.CourseGroup;
+import com.example.demo.entity.JGradeModification;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface CourseGroupRepository extends JpaRepository<CourseGroup, UUID> {}
+public interface JGradeModificationRepository extends JpaRepository<JGradeModification, UUID> {}

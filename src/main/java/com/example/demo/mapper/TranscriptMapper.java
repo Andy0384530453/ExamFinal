@@ -2,15 +2,15 @@ package com.example.demo.mapper;
 
 import com.example.demo.dto.transcript.TranscriptItemResponse;
 import com.example.demo.dto.transcript.TranscriptResponse;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.TranscriptItem;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JTranscriptItem;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TranscriptMapper {
 
-  public TranscriptItemResponse toItemResponse(TranscriptItem item) {
+  public TranscriptItemResponse toItemResponse(JTranscriptItem item) {
     return new TranscriptItemResponse(
         item.getCourseTitle(),
         item.getExamDate(),
@@ -19,7 +19,7 @@ public class TranscriptMapper {
         item.getCredits());
   }
 
-  public TranscriptResponse toResponse(Transcript transcript, List<TranscriptItemResponse> items) {
+  public TranscriptResponse toResponse(JTranscript transcript, List<TranscriptItemResponse> items) {
     return new TranscriptResponse(
         transcript.getId(),
         transcript.getStudentId(),

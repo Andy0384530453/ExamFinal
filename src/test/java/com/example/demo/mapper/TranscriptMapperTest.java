@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.demo.dto.transcript.TranscriptItemResponse;
 import com.example.demo.dto.transcript.TranscriptResponse;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.TranscriptItem;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JTranscriptItem;
 import com.example.demo.enums.TranscriptStatus;
 import java.time.Instant;
 import java.util.List;
@@ -18,7 +18,7 @@ class TranscriptMapperTest {
 
   @Test
   void maps_transcript_item_entity_to_response() {
-    TranscriptItem item = new TranscriptItem();
+    JTranscriptItem item = new JTranscriptItem();
     item.setCourseTitle("Mathematiques");
     item.setExamDate(Instant.parse("2023-11-15T09:00:00Z"));
     item.setCoefficient(1.5);
@@ -36,7 +36,7 @@ class TranscriptMapperTest {
 
   @Test
   void maps_transcript_item_with_nullable_grade_to_response() {
-    TranscriptItem item = new TranscriptItem();
+    JTranscriptItem item = new JTranscriptItem();
     item.setCourseTitle("Physique");
     item.setExamDate(Instant.parse("2023-12-01T09:00:00Z"));
     item.setCoefficient(1.0);
@@ -50,7 +50,7 @@ class TranscriptMapperTest {
 
   @Test
   void maps_transcript_entity_to_response_with_items() {
-    Transcript transcript = new Transcript();
+    JTranscript transcript = new JTranscript();
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(UUID.randomUUID());
     transcript.setPromotionId(UUID.randomUUID());
@@ -75,7 +75,7 @@ class TranscriptMapperTest {
 
   @Test
   void maps_global_transcript_with_null_promotion_and_nullable_fields() {
-    Transcript transcript = new Transcript();
+    JTranscript transcript = new JTranscript();
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(UUID.randomUUID());
     transcript.setPromotionId(null);
@@ -93,8 +93,8 @@ class TranscriptMapperTest {
     assertThat(response.items()).isEmpty();
   }
 
-  private static TranscriptItem transcriptItem(String title, Double grade, int credits) {
-    TranscriptItem item = new TranscriptItem();
+  private static JTranscriptItem transcriptItem(String title, Double grade, int credits) {
+    JTranscriptItem item = new JTranscriptItem();
     item.setCourseTitle(title);
     item.setExamDate(Instant.parse("2023-11-15T09:00:00Z"));
     item.setCoefficient(1.0);

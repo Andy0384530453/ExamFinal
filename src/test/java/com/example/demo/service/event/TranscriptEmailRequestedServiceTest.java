@@ -9,17 +9,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.demo.endpoint.event.model.TranscriptEmailRequested;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.TranscriptItem;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JTranscriptItem;
+import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.file.bucket.BucketComponent;
 import com.example.demo.mail.Email;
 import com.example.demo.mail.Mailer;
 import com.example.demo.pdf.TranscriptPdfGenerator;
-import com.example.demo.repository.TranscriptRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.JTranscriptRepository;
+import com.example.demo.repository.JUserRepository;
 import com.example.demo.service.TranscriptDataBuilder;
 import java.io.File;
 import java.net.URL;
@@ -34,8 +34,8 @@ import org.mockito.ArgumentCaptor;
 
 class TranscriptEmailRequestedServiceTest {
 
-  private TranscriptRepository transcriptRepository;
-  private UserRepository userRepository;
+  private JTranscriptRepository transcriptRepository;
+  private JUserRepository userRepository;
   private TranscriptDataBuilder transcriptDataBuilder;
   private TranscriptPdfGenerator pdfGenerator;
   private BucketComponent bucketComponent;
@@ -44,8 +44,8 @@ class TranscriptEmailRequestedServiceTest {
 
   @BeforeEach
   void setUp() {
-    transcriptRepository = mock(TranscriptRepository.class);
-    userRepository = mock(UserRepository.class);
+    transcriptRepository = mock(JTranscriptRepository.class);
+    userRepository = mock(JUserRepository.class);
     transcriptDataBuilder = mock(TranscriptDataBuilder.class);
     pdfGenerator = mock(TranscriptPdfGenerator.class);
     bucketComponent = mock(BucketComponent.class);
@@ -62,13 +62,13 @@ class TranscriptEmailRequestedServiceTest {
 
   @Test
   void successful_processing_sets_email_sent_with_pdf_url_and_generated_at() throws Exception {
-    User student = student();
-    Transcript transcript = transcript(student);
+    JUser student = student();
+    JTranscript transcript = transcript(student);
     when(transcriptRepository.findById(transcript.getId())).thenReturn(Optional.of(transcript));
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptDataBuilder.buildItems(student.getId(), null))
         .thenReturn(List.of(item("Maths", 14.5)));
-    when(pdfGenerator.generate(any(UUID.class), any(User.class), any()))
+    when(pdfGenerator.generate(any(UUID.class), any(JUser.class), any()))
         .thenReturn(new File("/tmp/transcript.pdf"));
     when(bucketComponent.presign(anyString(), any(Duration.class)))
         .thenReturn(new URL("https://s3.example/transcripts/transcript.pdf"));
@@ -88,11 +88,11 @@ class TranscriptEmailRequestedServiceTest {
 
   @Test
   void failed_processing_sets_transcript_status_to_failed() {
-    User student = student();
-    Transcript transcript = transcript(student);
+    JUser student = student();
+    JTranscript transcript = transcript(student);
     when(transcriptRepository.findById(transcript.getId())).thenReturn(Optional.of(transcript));
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
-    when(pdfGenerator.generate(any(UUID.class), any(User.class), any()))
+    when(pdfGenerator.generate(any(UUID.class), any(JUser.class), any()))
         .thenThrow(new RuntimeException("PDF generation failed"));
 
     service.accept(new TranscriptEmailRequested(transcript.getId()));
@@ -102,16 +102,16 @@ class TranscriptEmailRequestedServiceTest {
     verify(mailer, never()).accept(any());
   }
 
-  private static Transcript transcript(User student) {
-    Transcript transcript = new Transcript();
+  private static JTranscript transcript(JUser student) {
+    JTranscript transcript = new JTranscript();
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(student.getId());
     transcript.setStatus(TranscriptStatus.PENDING);
     return transcript;
   }
 
-  private static TranscriptItem item(String courseTitle, double grade) {
-    TranscriptItem item = new TranscriptItem();
+  private static JTranscriptItem item(String courseTitle, double grade) {
+    JTranscriptItem item = new JTranscriptItem();
     item.setId(UUID.randomUUID());
     item.setTranscriptId(UUID.randomUUID());
     item.setCourseTitle(courseTitle);
@@ -122,8 +122,8 @@ class TranscriptEmailRequestedServiceTest {
     return item;
   }
 
-  private static User student() {
-    User user = new User();
+  private static JUser student() {
+    JUser user = new JUser();
     user.setId(UUID.randomUUID());
     user.setRef("REF-" + UUID.randomUUID());
     user.setFirstName("Lucas");

@@ -3,25 +3,21 @@ package com.example.demo.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import java.time.Instant;
+import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
+@Table(name = "course_group")
 @Getter
 @Setter
-public class StudentGroup {
+public class JCourseGroup {
   @Id private UUID id;
 
   @Column(nullable = false)
-  private UUID studentId;
+  private UUID courseId;
 
   @Column(nullable = false)
   private UUID groupId;
-
-  @Column(nullable = false)
-  private Instant startDate;
-
-  private Instant endDate;
 }

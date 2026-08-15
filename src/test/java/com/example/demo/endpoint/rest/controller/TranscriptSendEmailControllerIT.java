@@ -10,21 +10,21 @@ import com.example.demo.config.TokenProvider;
 import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
 import com.example.demo.endpoint.event.EventProducer;
 import com.example.demo.endpoint.event.model.TranscriptEmailRequested;
-import com.example.demo.entity.Course;
-import com.example.demo.entity.Exam;
-import com.example.demo.entity.Grade;
-import com.example.demo.entity.Promotion;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JCourse;
+import com.example.demo.entity.JExam;
+import com.example.demo.entity.JGrade;
+import com.example.demo.entity.JPromotion;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ErrorResponse;
-import com.example.demo.repository.CourseRepository;
-import com.example.demo.repository.ExamRepository;
-import com.example.demo.repository.GradeRepository;
-import com.example.demo.repository.PromotionRepository;
-import com.example.demo.repository.TranscriptRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.JCourseRepository;
+import com.example.demo.repository.JExamRepository;
+import com.example.demo.repository.JGradeRepository;
+import com.example.demo.repository.JPromotionRepository;
+import com.example.demo.repository.JTranscriptRepository;
+import com.example.demo.repository.JUserRepository;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -43,23 +43,23 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
 
   @Autowired private TestRestTemplate restTemplate;
   @Autowired private TokenProvider tokenProvider;
-  @Autowired private UserRepository userRepository;
-  @Autowired private PromotionRepository promotionRepository;
-  @Autowired private CourseRepository courseRepository;
-  @Autowired private ExamRepository examRepository;
-  @Autowired private GradeRepository gradeRepository;
-  @Autowired private TranscriptRepository transcriptRepository;
+  @Autowired private JUserRepository userRepository;
+  @Autowired private JPromotionRepository promotionRepository;
+  @Autowired private JCourseRepository courseRepository;
+  @Autowired private JExamRepository examRepository;
+  @Autowired private JGradeRepository gradeRepository;
+  @Autowired private JTranscriptRepository transcriptRepository;
 
   @MockBean private EventProducer<TranscriptEmailRequested> eventProducer;
 
   @Test
   void admin_can_send_transcript_email_and_gets_202() {
-    User student = student();
-    Promotion promotion = promotion();
-    Course course = course(promotion, "Mathematiques", 6);
-    Exam exam = exam(course, "2023-11-15T09:00:00Z", 1.5);
+    JUser student = student();
+    JPromotion promotion = promotion();
+    JCourse course = course(promotion, "Mathematiques", 6);
+    JExam exam = exam(course, "2023-11-15T09:00:00Z", 1.5);
     grade(student, exam, 14.5);
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<TranscriptSendEmailResponse> response = sendEmail(token(admin), student.getId());
 
@@ -76,7 +76,7 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
 
   @Test
   void student_can_send_own_transcript_email_and_gets_202() {
-    User student = student();
+    JUser student = student();
 
     ResponseEntity<TranscriptSendEmailResponse> response =
         sendEmail(token(student), student.getId());
@@ -88,8 +88,8 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
 
   @Test
   void student_cannot_send_another_student_transcript_email() {
-    User student = student();
-    User otherStudent = student();
+    JUser student = student();
+    JUser otherStudent = student();
 
     ResponseEntity<ErrorResponse> response = sendEmailError(token(student), otherStudent.getId());
 
@@ -100,7 +100,7 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
 
   @Test
   void unknown_student_returns_404() {
-    User admin = admin();
+    JUser admin = admin();
 
     ResponseEntity<ErrorResponse> response = sendEmailError(token(admin), UUID.randomUUID());
 
@@ -111,15 +111,15 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
 
   @Test
   void transcript_created_with_pending_status_and_processing_is_async() {
-    User student = student();
-    User admin = admin();
+    JUser student = student();
+    JUser admin = admin();
 
     ResponseEntity<TranscriptSendEmailResponse> response = sendEmail(token(admin), student.getId());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     UUID transcriptId = response.getBody().transcriptId();
 
-    Transcript transcript = transcriptRepository.findById(transcriptId).orElseThrow();
+    JTranscript transcript = transcriptRepository.findById(transcriptId).orElseThrow();
     assertThat(transcript.getStudentId()).isEqualTo(student.getId());
     assertThat(transcript.getStatus()).isEqualTo(TranscriptStatus.PENDING);
     assertThat(transcript.getEmail()).isEqualTo(student.getEmail());
@@ -128,7 +128,7 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
   }
 
   private void assertTranscriptPending(UUID transcriptId, String email) {
-    Transcript transcript = transcriptRepository.findById(transcriptId).orElseThrow();
+    JTranscript transcript = transcriptRepository.findById(transcriptId).orElseThrow();
     assertThat(transcript.getStatus()).isEqualTo(TranscriptStatus.PENDING);
     assertThat(transcript.getEmail()).isEqualTo(email);
   }
@@ -163,20 +163,20 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
         ErrorResponse.class);
   }
 
-  private String token(User user) {
+  private String token(JUser user) {
     return tokenProvider.generateToken(user);
   }
 
-  private User student() {
+  private JUser student() {
     return user(Role.STUDENT);
   }
 
-  private User admin() {
+  private JUser admin() {
     return user(Role.ADMIN);
   }
 
-  private User user(Role role) {
-    User user = new User();
+  private JUser user(Role role) {
+    JUser user = new JUser();
     user.setId(UUID.randomUUID());
     user.setRef("REF-" + UUID.randomUUID());
     user.setFirstName("First");
@@ -186,16 +186,16 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
     return userRepository.save(user);
   }
 
-  private Promotion promotion() {
-    Promotion promotion = new Promotion();
+  private JPromotion promotion() {
+    JPromotion promotion = new JPromotion();
     promotion.setId(UUID.randomUUID());
     promotion.setRef("P-" + UUID.randomUUID());
     promotion.setYear(2024);
     return promotionRepository.save(promotion);
   }
 
-  private Course course(Promotion promotion, String title, int credits) {
-    Course course = new Course();
+  private JCourse course(JPromotion promotion, String title, int credits) {
+    JCourse course = new JCourse();
     course.setId(UUID.randomUUID());
     course.setRef("C-" + UUID.randomUUID());
     course.setTitle(title);
@@ -204,8 +204,8 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
     return courseRepository.save(course);
   }
 
-  private Exam exam(Course course, String date, double coefficient) {
-    Exam exam = new Exam();
+  private JExam exam(JCourse course, String date, double coefficient) {
+    JExam exam = new JExam();
     exam.setId(UUID.randomUUID());
     exam.setRef("E-" + UUID.randomUUID());
     exam.setCourseId(course.getId());
@@ -214,8 +214,8 @@ class TranscriptSendEmailControllerIT extends FacadeIT {
     return examRepository.save(exam);
   }
 
-  private void grade(User student, Exam exam, double value) {
-    Grade grade = new Grade();
+  private void grade(JUser student, JExam exam, double value) {
+    JGrade grade = new JGrade();
     grade.setId(UUID.randomUUID());
     grade.setStudentId(student.getId());
     grade.setExamId(exam.getId());

@@ -6,16 +6,16 @@ import com.example.demo.dto.transcript.TranscriptResponse;
 import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
 import com.example.demo.endpoint.event.EventProducer;
 import com.example.demo.endpoint.event.model.TranscriptEmailRequested;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.TranscriptItem;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JTranscriptItem;
+import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.TranscriptMapper;
-import com.example.demo.repository.PromotionRepository;
-import com.example.demo.repository.TranscriptRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.JPromotionRepository;
+import com.example.demo.repository.JTranscriptRepository;
+import com.example.demo.repository.JUserRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,18 +27,18 @@ import org.springframework.stereotype.Service;
 public class TranscriptServiceImpl implements TranscriptService {
 
   private final TokenProvider tokenProvider;
-  private final UserRepository userRepository;
-  private final PromotionRepository promotionRepository;
-  private final TranscriptRepository transcriptRepository;
+  private final JUserRepository userRepository;
+  private final JPromotionRepository promotionRepository;
+  private final JTranscriptRepository transcriptRepository;
   private final TranscriptMapper transcriptMapper;
   private final TranscriptDataBuilder transcriptDataBuilder;
   private final EventProducer<TranscriptEmailRequested> eventProducer;
 
   public TranscriptServiceImpl(
       TokenProvider tokenProvider,
-      UserRepository userRepository,
-      PromotionRepository promotionRepository,
-      TranscriptRepository transcriptRepository,
+      JUserRepository userRepository,
+      JPromotionRepository promotionRepository,
+      JTranscriptRepository transcriptRepository,
       TranscriptMapper transcriptMapper,
       TranscriptDataBuilder transcriptDataBuilder,
       EventProducer<TranscriptEmailRequested> eventProducer) {
@@ -57,8 +57,8 @@ public class TranscriptServiceImpl implements TranscriptService {
     checkStudentExists(studentId);
     checkPromotionExists(promotionId);
 
-    List<TranscriptItem> items = transcriptDataBuilder.buildItems(studentId, promotionId);
-    Transcript transcript = resolveTranscript(studentId, promotionId);
+    List<JTranscriptItem> items = transcriptDataBuilder.buildItems(studentId, promotionId);
+    JTranscript transcript = resolveTranscript(studentId, promotionId);
     List<TranscriptItemResponse> itemResponses =
         items.stream().map(transcriptMapper::toItemResponse).toList();
     return transcriptMapper.toResponse(transcript, itemResponses);
@@ -67,9 +67,9 @@ public class TranscriptServiceImpl implements TranscriptService {
   @Override
   public TranscriptSendEmailResponse requestTranscriptEmail(UUID studentId, Jwt jwt) {
     checkAccess(studentId, jwt);
-    User student = findStudentOrThrow(studentId);
+    JUser student = findStudentOrThrow(studentId);
 
-    Transcript transcript = resolveTranscript(studentId, null);
+    JTranscript transcript = resolveTranscript(studentId, null);
     transcript.setStatus(TranscriptStatus.PENDING);
     transcript.setEmail(student.getEmail());
     transcriptRepository.save(transcript);
@@ -102,7 +102,7 @@ public class TranscriptServiceImpl implements TranscriptService {
     findStudentOrThrow(studentId);
   }
 
-  private User findStudentOrThrow(UUID studentId) {
+  private JUser findStudentOrThrow(UUID studentId) {
     return userRepository
         .findById(studentId)
         .filter(user -> user.getRole() == Role.STUDENT)
@@ -116,15 +116,15 @@ public class TranscriptServiceImpl implements TranscriptService {
     }
   }
 
-  private Transcript resolveTranscript(UUID studentId, UUID promotionId) {
-    Optional<Transcript> persisted =
+  private JTranscript resolveTranscript(UUID studentId, UUID promotionId) {
+    Optional<JTranscript> persisted =
         promotionId == null
             ? transcriptRepository.findByStudentIdAndPromotionIdIsNull(studentId)
             : transcriptRepository.findByStudentIdAndPromotionId(studentId, promotionId);
     if (persisted.isPresent()) {
       return persisted.get();
     }
-    Transcript transcript = new Transcript();
+    JTranscript transcript = new JTranscript();
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(studentId);
     transcript.setPromotionId(promotionId);

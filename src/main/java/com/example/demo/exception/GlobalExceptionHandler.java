@@ -33,9 +33,7 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleTypeMismatch(
       MethodArgumentTypeMismatchException e, HttpServletRequest request) {
     return build(
-        HttpStatus.BAD_REQUEST,
-        "Invalid value for parameter '" + e.getName() + "'",
-        request);
+        HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + e.getName() + "'", request);
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)

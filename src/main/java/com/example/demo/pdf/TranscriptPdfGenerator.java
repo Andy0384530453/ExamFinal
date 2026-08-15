@@ -1,7 +1,7 @@
 package com.example.demo.pdf;
 
-import com.example.demo.entity.TranscriptItem;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JTranscriptItem;
+import com.example.demo.entity.JUser;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
@@ -28,7 +28,7 @@ public class TranscriptPdfGenerator {
   private static final Font HEADER_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
 
   @SneakyThrows
-  public File generate(UUID transcriptId, User student, List<TranscriptItem> items) {
+  public File generate(UUID transcriptId, JUser student, List<JTranscriptItem> items) {
     File pdf = File.createTempFile("transcript-" + transcriptId, ".pdf");
     Document document = new Document(PageSize.A4);
     PdfWriter.getInstance(document, new FileOutputStream(pdf));
@@ -39,7 +39,7 @@ public class TranscriptPdfGenerator {
     return pdf;
   }
 
-  private void addHeader(Document document, User student) {
+  private void addHeader(Document document, JUser student) {
     Paragraph title = new Paragraph("GRADE TRANSCRIPT", TITLE_FONT);
     title.setAlignment(Element.ALIGN_CENTER);
     document.add(title);
@@ -51,7 +51,7 @@ public class TranscriptPdfGenerator {
     document.add(new Paragraph(" "));
   }
 
-  private void addTable(Document document, List<TranscriptItem> items) {
+  private void addTable(Document document, List<JTranscriptItem> items) {
     PdfPTable table = new PdfPTable(5);
     table.setWidthPercentage(100);
     table.addCell(headerCell("Course"));
@@ -59,7 +59,7 @@ public class TranscriptPdfGenerator {
     table.addCell(headerCell("Coefficient"));
     table.addCell(headerCell("Grade"));
     table.addCell(headerCell("Credits"));
-    for (TranscriptItem item : items) {
+    for (JTranscriptItem item : items) {
       table.addCell(cell(item.getCourseTitle()));
       table.addCell(cell(formatExamDate(item)));
       table.addCell(cell(formatCoefficient(item)));
@@ -79,18 +79,18 @@ public class TranscriptPdfGenerator {
     return new PdfPCell(new Phrase(text));
   }
 
-  private String formatExamDate(TranscriptItem item) {
+  private String formatExamDate(JTranscriptItem item) {
     if (item.getExamDate() == null) {
       return "";
     }
     return DateTimeFormatter.ISO_INSTANT.format(item.getExamDate());
   }
 
-  private String formatCoefficient(TranscriptItem item) {
+  private String formatCoefficient(JTranscriptItem item) {
     return item.getCoefficient() == null ? "" : String.valueOf(item.getCoefficient());
   }
 
-  private String formatGrade(TranscriptItem item) {
+  private String formatGrade(JTranscriptItem item) {
     return item.getGrade() == null ? "" : String.valueOf(item.getGrade());
   }
 }

@@ -1,6 +1,6 @@
 package com.example.demo.config;
 
-import com.example.demo.entity.User;
+import com.example.demo.entity.JUser;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -38,7 +38,7 @@ public class TokenProvider {
     this.expirationHours = expirationHours;
   }
 
-  public String generateToken(User user) {
+  public String generateToken(JUser user) {
     Instant now = Instant.now();
     JwtClaimsSet claims =
         JwtClaimsSet.builder()

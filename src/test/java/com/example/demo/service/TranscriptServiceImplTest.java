@@ -12,16 +12,16 @@ import com.example.demo.dto.transcript.TranscriptResponse;
 import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
 import com.example.demo.endpoint.event.EventProducer;
 import com.example.demo.endpoint.event.model.TranscriptEmailRequested;
-import com.example.demo.entity.Transcript;
-import com.example.demo.entity.TranscriptItem;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JTranscript;
+import com.example.demo.entity.JTranscriptItem;
+import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.TranscriptMapper;
-import com.example.demo.repository.PromotionRepository;
-import com.example.demo.repository.TranscriptRepository;
-import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.JPromotionRepository;
+import com.example.demo.repository.JTranscriptRepository;
+import com.example.demo.repository.JUserRepository;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -36,9 +36,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 class TranscriptServiceImplTest {
 
   private TokenProvider tokenProvider;
-  private UserRepository userRepository;
-  private PromotionRepository promotionRepository;
-  private TranscriptRepository transcriptRepository;
+  private JUserRepository userRepository;
+  private JPromotionRepository promotionRepository;
+  private JTranscriptRepository transcriptRepository;
   private TranscriptDataBuilder transcriptDataBuilder;
   private EventProducer<TranscriptEmailRequested> eventProducer;
   private TranscriptServiceImpl service;
@@ -47,9 +47,9 @@ class TranscriptServiceImplTest {
   @SuppressWarnings("unchecked")
   void setUp() {
     tokenProvider = mock(TokenProvider.class);
-    userRepository = mock(UserRepository.class);
-    promotionRepository = mock(PromotionRepository.class);
-    transcriptRepository = mock(TranscriptRepository.class);
+    userRepository = mock(JUserRepository.class);
+    promotionRepository = mock(JPromotionRepository.class);
+    transcriptRepository = mock(JTranscriptRepository.class);
     transcriptDataBuilder = mock(TranscriptDataBuilder.class);
     eventProducer = mock(EventProducer.class);
     service =
@@ -65,7 +65,7 @@ class TranscriptServiceImplTest {
 
   @Test
   void admin_can_access_any_student_transcript() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
@@ -80,7 +80,7 @@ class TranscriptServiceImplTest {
 
   @Test
   void student_can_access_own_transcript() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.STUDENT);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
     when(tokenProvider.getUserId(jwt)).thenReturn(student.getId().toString());
@@ -123,7 +123,7 @@ class TranscriptServiceImplTest {
 
   @Test
   void unknown_promotion_throws_not_found() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
@@ -135,11 +135,11 @@ class TranscriptServiceImplTest {
 
   @Test
   void without_promotion_transcript_contains_all_grades() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
-    List<TranscriptItem> items =
+    List<JTranscriptItem> items =
         List.of(
             item("Maths", "2023-01-01T09:00:00Z", 1.0, 12.0, 6),
             item("Physique", "2024-01-01T09:00:00Z", 1.0, 14.0, 5));
@@ -154,7 +154,7 @@ class TranscriptServiceImplTest {
 
   @Test
   void with_promotion_transcript_is_filtered() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     UUID promotionA = UUID.randomUUID();
     when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
@@ -172,7 +172,7 @@ class TranscriptServiceImplTest {
 
   @Test
   void multiple_grades_produce_multiple_items_in_date_order() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
@@ -190,9 +190,9 @@ class TranscriptServiceImplTest {
 
   @Test
   void reuses_persisted_transcript_information() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    Transcript persisted = new Transcript();
+    JTranscript persisted = new JTranscript();
     persisted.setId(UUID.randomUUID());
     persisted.setStudentId(student.getId());
     persisted.setPromotionId(null);
@@ -217,7 +217,7 @@ class TranscriptServiceImplTest {
 
   @Test
   void admin_can_request_transcript_email() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
@@ -233,12 +233,12 @@ class TranscriptServiceImplTest {
     verify(eventProducer).accept(captor.capture());
     TranscriptEmailRequested event = captor.getValue().iterator().next();
     assertThat(event.getTranscriptId()).isEqualTo(response.transcriptId());
-    verify(transcriptRepository).save(any(Transcript.class));
+    verify(transcriptRepository).save(any(JTranscript.class));
   }
 
   @Test
   void student_can_request_own_transcript_email() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.STUDENT);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
     when(tokenProvider.getUserId(jwt)).thenReturn(student.getId().toString());
@@ -274,9 +274,9 @@ class TranscriptServiceImplTest {
 
   @Test
   void request_email_reuses_persisted_transcript_and_resets_to_pending() {
-    User student = student();
+    JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    Transcript persisted = new Transcript();
+    JTranscript persisted = new JTranscript();
     persisted.setId(UUID.randomUUID());
     persisted.setStudentId(student.getId());
     persisted.setPromotionId(null);
@@ -298,9 +298,9 @@ class TranscriptServiceImplTest {
     return ArgumentCaptor.forClass(Collection.class);
   }
 
-  private static TranscriptItem item(
+  private static JTranscriptItem item(
       String courseTitle, String examDate, double coefficient, double grade, int credits) {
-    TranscriptItem item = new TranscriptItem();
+    JTranscriptItem item = new JTranscriptItem();
     item.setId(UUID.randomUUID());
     item.setTranscriptId(UUID.randomUUID());
     item.setCourseTitle(courseTitle);
@@ -322,8 +322,8 @@ class TranscriptServiceImplTest {
         .build();
   }
 
-  private static User student() {
-    User user = new User();
+  private static JUser student() {
+    JUser user = new JUser();
     user.setId(UUID.randomUUID());
     user.setRef("REF-" + UUID.randomUUID());
     user.setFirstName("First");

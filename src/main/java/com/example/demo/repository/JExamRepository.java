@@ -1,9 +1,9 @@
 package com.example.demo.repository;
 
-import com.example.demo.entity.Course;
+import com.example.demo.entity.JExam;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface CourseRepository extends JpaRepository<Course, UUID> {}
+public interface JExamRepository extends JpaRepository<JExam, UUID> {}

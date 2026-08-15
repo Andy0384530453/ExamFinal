@@ -2,8 +2,8 @@ package com.example.demo.pdf;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.demo.entity.TranscriptItem;
-import com.example.demo.entity.User;
+import com.example.demo.entity.JTranscriptItem;
+import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import java.io.File;
 import java.io.IOException;
@@ -18,14 +18,14 @@ class TranscriptPdfGeneratorTest {
   @Test
   void generates_valid_pdf_file() throws IOException {
     TranscriptPdfGenerator generator = new TranscriptPdfGenerator();
-    User student = new User();
+    JUser student = new JUser();
     student.setId(UUID.randomUUID());
     student.setFirstName("Lucas");
     student.setLastName("Moreau");
     student.setEmail("student@school.com");
     student.setRole(Role.STUDENT);
 
-    TranscriptItem item = new TranscriptItem();
+    JTranscriptItem item = new JTranscriptItem();
     item.setId(UUID.randomUUID());
     item.setTranscriptId(UUID.randomUUID());
     item.setCourseTitle("Maths");

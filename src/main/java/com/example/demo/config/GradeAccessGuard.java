@@ -32,36 +32,41 @@ public class GradeAccessGuard {
   }
 
   public void checkAdminOrTeacherOfCourse(UUID courseId, Jwt jwt) {
-    UUID userId = authenticate(jwt);
+    requireAdminOrTeacher(jwt);
     if (isAdmin(jwt)) {
       return;
     }
-    if (!isTeacherOfCourse(userId, courseId)) {
+    UUID teacherId = userId(jwt);
+    if (!isTeacherOfCourse(teacherId, courseId)) {
       throw new AccessDeniedException("A teacher can only access grades of their own courses");
     }
   }
 
   public void checkAdminOrTeacherOfGrade(UUID gradeId, Jwt jwt) {
-    UUID userId = authenticate(jwt);
+    requireAdminOrTeacher(jwt);
     if (isAdmin(jwt)) {
       return;
     }
+    UUID teacherId = userId(jwt);
     UUID courseId = courseIdOfGrade(gradeId);
-    if (!isTeacherOfCourse(userId, courseId)) {
+    if (!isTeacherOfCourse(teacherId, courseId)) {
       throw new AccessDeniedException("A teacher can only access grades of their own courses");
     }
   }
 
-  private UUID authenticate(Jwt jwt) {
+  private void requireAdminOrTeacher(Jwt jwt) {
     String role = tokenProvider.getRole(jwt);
-    if (Role.ADMIN.name().equals(role) || Role.TEACHER.name().equals(role)) {
-      return UUID.fromString(tokenProvider.getUserId(jwt));
+    if (!Role.ADMIN.name().equals(role) && !Role.TEACHER.name().equals(role)) {
+      throw new AccessDeniedException("Access denied: insufficient role");
     }
-    throw new AccessDeniedException("Access denied: insufficient role");
   }
 
   private boolean isAdmin(Jwt jwt) {
     return Role.ADMIN.name().equals(tokenProvider.getRole(jwt));
+  }
+
+  private UUID userId(Jwt jwt) {
+    return UUID.fromString(tokenProvider.getUserId(jwt));
   }
 
   private boolean isTeacherOfCourse(UUID teacherId, UUID courseId) {
@@ -73,12 +78,14 @@ public class GradeAccessGuard {
     JGrade grade =
         gradeRepository
             .findById(gradeId)
-            .orElseThrow(() -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
     JExam exam =
         examRepository
             .findById(grade.getExamId())
             .orElseThrow(
-                () -> new ResourceNotFoundException("Exam not found with id: " + grade.getExamId()));
+                () ->
+                    new ResourceNotFoundException("Exam not found with id: " + grade.getExamId()));
     return exam.getCourseId();
   }
 }

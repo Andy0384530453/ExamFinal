@@ -6,4 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface JCourseTeacherRepository extends JpaRepository<JCourseTeacher, UUID> {}
+public interface JCourseTeacherRepository extends JpaRepository<JCourseTeacher, UUID> {
+
+  boolean existsByTeacherIdAndCourseId(UUID teacherId, UUID courseId);
+}

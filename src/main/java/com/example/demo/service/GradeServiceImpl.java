@@ -67,7 +67,8 @@ public class GradeServiceImpl implements GradeService {
     JGrade grade =
         gradeRepository
             .findById(gradeId)
-            .orElseThrow(() -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
     if (Double.compare(grade.getValue(), request.value()) == 0) {
       throw new IllegalArgumentException("Grade already has value " + request.value());
     }
@@ -131,15 +132,15 @@ public class GradeServiceImpl implements GradeService {
     return courseRepository
         .findById(courseId)
         .map(JCourse::getTitle)
-        .orElseThrow(
-            () -> new ResourceNotFoundException("Course not found with id: " + courseId));
+        .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
   }
 
   private UUID courseIdOfGrade(UUID gradeId) {
     JGrade grade =
         gradeRepository
             .findById(gradeId)
-            .orElseThrow(() -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
     return examRepository
         .findById(grade.getExamId())
         .orElseThrow(

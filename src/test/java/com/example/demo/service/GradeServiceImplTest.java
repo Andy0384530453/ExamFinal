@@ -105,7 +105,8 @@ class GradeServiceImplTest {
     when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, "Maths")));
     when(tokenProvider.getUserId(jwt)).thenReturn(userId.toString());
 
-    GradeResponse response = service.updateGrade(gradeId, new GradeUpdateRequest(14.5, "Claim"), jwt);
+    GradeResponse response =
+        service.updateGrade(gradeId, new GradeUpdateRequest(14.5, "Claim"), jwt);
 
     assertThat(response.value()).isEqualTo(14.5);
     verify(gradeRepository).save(grade);
@@ -113,8 +114,7 @@ class GradeServiceImplTest {
     assertThat(grade.getModifiedBy()).isEqualTo(userId);
     assertThat(grade.getModifiedAt()).isNotNull();
 
-    ArgumentCaptor<JGradeModification> captor =
-        ArgumentCaptor.forClass(JGradeModification.class);
+    ArgumentCaptor<JGradeModification> captor = ArgumentCaptor.forClass(JGradeModification.class);
     verify(gradeModificationRepository).save(captor.capture());
     JGradeModification modification = captor.getValue();
     assertThat(modification.getGradeId()).isEqualTo(gradeId);
@@ -133,7 +133,8 @@ class GradeServiceImplTest {
     JGrade grade = grade(examId, 10.0);
     when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade));
 
-    assertThatThrownBy(() -> service.updateGrade(gradeId, new GradeUpdateRequest(10.0, "Claim"), jwt))
+    assertThatThrownBy(
+            () -> service.updateGrade(gradeId, new GradeUpdateRequest(10.0, "Claim"), jwt))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("already has value");
 
@@ -145,8 +146,7 @@ class GradeServiceImplTest {
     Jwt jwt = mock(Jwt.class);
     UUID gradeId = UUID.randomUUID();
 
-    assertThatThrownBy(
-            () -> service.updateGrade(gradeId, new GradeUpdateRequest(10.0, " "), jwt))
+    assertThatThrownBy(() -> service.updateGrade(gradeId, new GradeUpdateRequest(10.0, " "), jwt))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("reason is required");
 
@@ -158,7 +158,8 @@ class GradeServiceImplTest {
     Jwt jwt = mock(Jwt.class);
     UUID gradeId = UUID.randomUUID();
 
-    assertThatThrownBy(() -> service.updateGrade(gradeId, new GradeUpdateRequest(null, "Claim"), jwt))
+    assertThatThrownBy(
+            () -> service.updateGrade(gradeId, new GradeUpdateRequest(null, "Claim"), jwt))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("value is required");
 

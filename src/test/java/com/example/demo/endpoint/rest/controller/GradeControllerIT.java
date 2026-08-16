@@ -58,8 +58,7 @@ class GradeControllerIT extends FacadeIT {
     JGrade grade = grade(exam, 12.0);
     teach(teacher, course);
 
-    ResponseEntity<List<GradeResponse>> response =
-        listGrades(token(teacher), course.getId());
+    ResponseEntity<List<GradeResponse>> response = listGrades(token(teacher), course.getId());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).hasSize(1);
@@ -76,8 +75,7 @@ class GradeControllerIT extends FacadeIT {
     JCourse otherCourse = course();
     teach(teacher, otherCourse);
 
-    ResponseEntity<ErrorResponse> response =
-        listGradesError(token(teacher), course.getId());
+    ResponseEntity<ErrorResponse> response = listGradesError(token(teacher), course.getId());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
   }
@@ -141,8 +139,7 @@ class GradeControllerIT extends FacadeIT {
     JGrade grade = grade(exam, 10.0);
     updateGrade(token(admin), grade.getId(), new GradeUpdateRequest(14.5, "Claim accepted"));
 
-    ResponseEntity<List<GradeHistoryResponse>> response =
-        getHistory(token(admin), grade.getId());
+    ResponseEntity<List<GradeHistoryResponse>> response = getHistory(token(admin), grade.getId());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).hasSize(1);

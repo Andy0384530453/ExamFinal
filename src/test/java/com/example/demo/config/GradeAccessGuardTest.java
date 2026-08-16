@@ -91,8 +91,7 @@ class GradeAccessGuardTest {
     when(courseTeacherRepository.findByTeacherId(teacherId))
         .thenReturn(List.of(courseTeacher(courseId)));
 
-    assertThatCode(() -> guard.checkAdminOrTeacherOfGrade(gradeId, jwt))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> guard.checkAdminOrTeacherOfGrade(gradeId, jwt)).doesNotThrowAnyException();
   }
 
   @Test

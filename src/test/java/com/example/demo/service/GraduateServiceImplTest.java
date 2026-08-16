@@ -9,7 +9,6 @@ import com.example.demo.dto.graduate.GraduateResponse;
 import com.example.demo.entity.JGroup;
 import com.example.demo.entity.JPromotion;
 import com.example.demo.entity.JStudentGroup;
-import com.example.demo.entity.JTranscriptItem;
 import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.excel.GraduateExcelGenerator;
@@ -31,7 +30,7 @@ class GraduateServiceImplTest {
   private JGroupRepository groupRepository;
   private JStudentGroupRepository studentGroupRepository;
   private JUserRepository userRepository;
-  private TranscriptDataBuilder transcriptDataBuilder;
+  private GraduateCalculator graduateCalculator;
   private GraduateExcelGenerator excelGenerator;
   private GraduateServiceImpl service;
 
@@ -41,7 +40,7 @@ class GraduateServiceImplTest {
     groupRepository = mock(JGroupRepository.class);
     studentGroupRepository = mock(JStudentGroupRepository.class);
     userRepository = mock(JUserRepository.class);
-    transcriptDataBuilder = mock(TranscriptDataBuilder.class);
+    graduateCalculator = mock(GraduateCalculator.class);
     excelGenerator = mock(GraduateExcelGenerator.class);
     service =
         new GraduateServiceImpl(
@@ -49,7 +48,7 @@ class GraduateServiceImplTest {
             groupRepository,
             studentGroupRepository,
             userRepository,
-            transcriptDataBuilder,
+            graduateCalculator,
             excelGenerator);
   }
 
@@ -63,8 +62,8 @@ class GraduateServiceImplTest {
     when(studentGroupRepository.findByGroupIdIn(List.of(group.getId())))
         .thenReturn(List.of(membership(student.getId(), group.getId(), Instant.now())));
     when(userRepository.findAllById(List.of(student.getId()))).thenReturn(List.of(student));
-    when(transcriptDataBuilder.buildItems(student.getId(), promotionId))
-        .thenReturn(List.of(item(12.0), item(14.0)));
+    when(graduateCalculator.passingAverage(student.getId(), promotionId))
+        .thenReturn(Optional.of(13.0));
 
     List<GraduateResponse> graduates = service.getGraduates(promotionId);
 
@@ -102,8 +101,8 @@ class GraduateServiceImplTest {
     when(studentGroupRepository.findByGroupIdIn(List.of(group.getId())))
         .thenReturn(List.of(membership(student.getId(), group.getId(), Instant.now())));
     when(userRepository.findAllById(List.of(student.getId()))).thenReturn(List.of(student));
-    when(transcriptDataBuilder.buildItems(student.getId(), promotionId))
-        .thenReturn(List.of(item(9.0), item(8.0)));
+    when(graduateCalculator.passingAverage(student.getId(), promotionId))
+        .thenReturn(Optional.empty());
 
     List<GraduateResponse> graduates = service.getGraduates(promotionId);
 
@@ -171,17 +170,6 @@ class GraduateServiceImplTest {
     user.setEmail("student@school.com");
     user.setRole(Role.STUDENT);
     return user;
-  }
-
-  private static JTranscriptItem item(double grade) {
-    JTranscriptItem item = new JTranscriptItem();
-    item.setId(UUID.randomUUID());
-    item.setCourseTitle("Maths");
-    item.setExamDate(Instant.parse("2024-01-01T09:00:00Z"));
-    item.setCoefficient(1.0);
-    item.setGrade(grade);
-    item.setCredits(6);
-    return item;
   }
 
   private static JPromotion promotion() {

@@ -54,10 +54,9 @@ class TranscriptMapperTest {
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(UUID.randomUUID());
     transcript.setPromotionId(UUID.randomUUID());
-    transcript.setStatus(TranscriptStatus.GENERATED);
-    transcript.setPdfUrl("https://s3.example/transcript.pdf");
-    transcript.setEmail("student@school.com");
-    transcript.setGeneratedAt(Instant.parse("2024-01-01T10:00:00Z"));
+    transcript.markPending("student@school.com");
+    transcript.markGenerated(
+        "https://s3.example/transcript.pdf", Instant.parse("2024-01-01T10:00:00Z"));
 
     TranscriptItemResponse item = mapper.toItemResponse(transcriptItem("Mathematiques", 14.5, 6));
 
@@ -79,10 +78,6 @@ class TranscriptMapperTest {
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(UUID.randomUUID());
     transcript.setPromotionId(null);
-    transcript.setStatus(TranscriptStatus.PENDING);
-    transcript.setPdfUrl(null);
-    transcript.setEmail(null);
-    transcript.setGeneratedAt(null);
 
     TranscriptResponse response = mapper.toResponse(transcript, List.of());
 

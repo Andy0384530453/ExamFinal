@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.demo.config.TokenProvider;
+import com.example.demo.config.TranscriptAccessGuard;
 import com.example.demo.dto.transcript.TranscriptResponse;
 import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
 import com.example.demo.endpoint.event.EventProducer;
@@ -30,12 +30,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 class TranscriptServiceImplTest {
 
-  private TokenProvider tokenProvider;
+  private TranscriptAccessGuard accessGuard;
   private JUserRepository userRepository;
   private JPromotionRepository promotionRepository;
   private JTranscriptRepository transcriptRepository;
@@ -46,7 +45,7 @@ class TranscriptServiceImplTest {
   @BeforeEach
   @SuppressWarnings("unchecked")
   void setUp() {
-    tokenProvider = mock(TokenProvider.class);
+    accessGuard = mock(TranscriptAccessGuard.class);
     userRepository = mock(JUserRepository.class);
     promotionRepository = mock(JPromotionRepository.class);
     transcriptRepository = mock(JTranscriptRepository.class);
@@ -54,7 +53,7 @@ class TranscriptServiceImplTest {
     eventProducer = mock(EventProducer.class);
     service =
         new TranscriptServiceImpl(
-            tokenProvider,
+            accessGuard,
             userRepository,
             promotionRepository,
             transcriptRepository,
@@ -67,7 +66,6 @@ class TranscriptServiceImplTest {
   void admin_can_access_any_student_transcript() {
     JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptDataBuilder.buildItems(student.getId(), null)).thenReturn(List.of());
 
@@ -82,8 +80,6 @@ class TranscriptServiceImplTest {
   void student_can_access_own_transcript() {
     JUser student = student();
     Jwt jwt = jwt(Role.STUDENT);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
-    when(tokenProvider.getUserId(jwt)).thenReturn(student.getId().toString());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptDataBuilder.buildItems(student.getId(), null)).thenReturn(List.of());
 
@@ -93,28 +89,8 @@ class TranscriptServiceImplTest {
   }
 
   @Test
-  void student_cannot_access_another_student_transcript() {
-    Jwt jwt = jwt(Role.STUDENT);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
-    when(tokenProvider.getUserId(jwt)).thenReturn(UUID.randomUUID().toString());
-
-    assertThatThrownBy(() -> service.getStudentTranscript(UUID.randomUUID(), null, jwt))
-        .isInstanceOf(AccessDeniedException.class);
-  }
-
-  @Test
-  void teacher_cannot_access_transcript() {
-    Jwt jwt = jwt(Role.TEACHER);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.TEACHER.name());
-
-    assertThatThrownBy(() -> service.getStudentTranscript(UUID.randomUUID(), null, jwt))
-        .isInstanceOf(AccessDeniedException.class);
-  }
-
-  @Test
   void unknown_student_throws_not_found() {
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.getStudentTranscript(UUID.randomUUID(), null, jwt))
@@ -125,7 +101,6 @@ class TranscriptServiceImplTest {
   void unknown_promotion_throws_not_found() {
     JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(promotionRepository.existsById(any(UUID.class))).thenReturn(false);
 
@@ -137,7 +112,6 @@ class TranscriptServiceImplTest {
   void without_promotion_transcript_contains_all_grades() {
     JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     List<JTranscriptItem> items =
         List.of(
@@ -157,7 +131,6 @@ class TranscriptServiceImplTest {
     JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
     UUID promotionA = UUID.randomUUID();
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(promotionRepository.existsById(promotionA)).thenReturn(true);
     when(transcriptDataBuilder.buildItems(student.getId(), promotionA))
@@ -174,7 +147,6 @@ class TranscriptServiceImplTest {
   void multiple_grades_produce_multiple_items_in_date_order() {
     JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptDataBuilder.buildItems(student.getId(), null))
         .thenReturn(
@@ -196,11 +168,9 @@ class TranscriptServiceImplTest {
     persisted.setId(UUID.randomUUID());
     persisted.setStudentId(student.getId());
     persisted.setPromotionId(null);
-    persisted.setStatus(TranscriptStatus.GENERATED);
-    persisted.setPdfUrl("https://s3.example/transcript.pdf");
-    persisted.setEmail("student@school.com");
-    persisted.setGeneratedAt(Instant.parse("2024-01-01T10:00:00Z"));
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
+    persisted.markPending("student@school.com");
+    persisted.markGenerated(
+        "https://s3.example/transcript.pdf", Instant.parse("2024-01-01T10:00:00Z"));
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptDataBuilder.buildItems(student.getId(), null)).thenReturn(List.of());
     when(transcriptRepository.findByStudentIdAndPromotionIdIsNull(student.getId()))
@@ -219,7 +189,6 @@ class TranscriptServiceImplTest {
   void admin_can_request_transcript_email() {
     JUser student = student();
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptRepository.findByStudentIdAndPromotionIdIsNull(student.getId()))
         .thenReturn(Optional.empty());
@@ -240,8 +209,6 @@ class TranscriptServiceImplTest {
   void student_can_request_own_transcript_email() {
     JUser student = student();
     Jwt jwt = jwt(Role.STUDENT);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
-    when(tokenProvider.getUserId(jwt)).thenReturn(student.getId().toString());
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptRepository.findByStudentIdAndPromotionIdIsNull(student.getId()))
         .thenReturn(Optional.empty());
@@ -253,19 +220,8 @@ class TranscriptServiceImplTest {
   }
 
   @Test
-  void student_cannot_request_another_student_transcript_email() {
-    Jwt jwt = jwt(Role.STUDENT);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
-    when(tokenProvider.getUserId(jwt)).thenReturn(UUID.randomUUID().toString());
-
-    assertThatThrownBy(() -> service.requestTranscriptEmail(UUID.randomUUID(), jwt))
-        .isInstanceOf(AccessDeniedException.class);
-  }
-
-  @Test
   void unknown_student_request_email_throws_not_found() {
     Jwt jwt = jwt(Role.ADMIN);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
     when(userRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.requestTranscriptEmail(UUID.randomUUID(), jwt))
@@ -280,8 +236,10 @@ class TranscriptServiceImplTest {
     persisted.setId(UUID.randomUUID());
     persisted.setStudentId(student.getId());
     persisted.setPromotionId(null);
-    persisted.setStatus(TranscriptStatus.EMAIL_SENT);
-    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
+    persisted.markPending("student@school.com");
+    persisted.markGenerated(
+        "https://s3.example/transcript.pdf", Instant.parse("2024-01-01T10:00:00Z"));
+    persisted.markEmailSent();
     when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
     when(transcriptRepository.findByStudentIdAndPromotionIdIsNull(student.getId()))
         .thenReturn(Optional.of(persisted));

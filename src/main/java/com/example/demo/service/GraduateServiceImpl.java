@@ -22,13 +22,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class GraduateServiceImpl implements GraduateService {
 
-  private static final double PASSING_AVERAGE = 10.0;
-
   private final JPromotionRepository promotionRepository;
   private final JGroupRepository groupRepository;
   private final JStudentGroupRepository studentGroupRepository;
   private final JUserRepository userRepository;
-  private final TranscriptDataBuilder transcriptDataBuilder;
+  private final GraduateCalculator graduateCalculator;
   private final GraduateExcelGenerator excelGenerator;
 
   public GraduateServiceImpl(
@@ -36,13 +34,13 @@ public class GraduateServiceImpl implements GraduateService {
       JGroupRepository groupRepository,
       JStudentGroupRepository studentGroupRepository,
       JUserRepository userRepository,
-      TranscriptDataBuilder transcriptDataBuilder,
+      GraduateCalculator graduateCalculator,
       GraduateExcelGenerator excelGenerator) {
     this.promotionRepository = promotionRepository;
     this.groupRepository = groupRepository;
     this.studentGroupRepository = studentGroupRepository;
     this.userRepository = userRepository;
-    this.transcriptDataBuilder = transcriptDataBuilder;
+    this.graduateCalculator = graduateCalculator;
     this.excelGenerator = excelGenerator;
   }
 
@@ -101,27 +99,15 @@ public class GraduateServiceImpl implements GraduateService {
     if (student == null) {
       return Optional.empty();
     }
-    double average = computeAverage(studentId, promotionId);
-    if (average < PASSING_AVERAGE) {
-      return Optional.empty();
-    }
-    return Optional.of(
-        new GraduateResponse(
-            student.getId(),
-            student.getFirstName(),
-            student.getLastName(),
-            student.getEmail(),
-            round(average)));
-  }
-
-  private double computeAverage(UUID studentId, UUID promotionId) {
-    return transcriptDataBuilder.buildItems(studentId, promotionId).stream()
-        .mapToDouble(item -> item.getGrade() == null ? 0.0 : item.getGrade())
-        .average()
-        .orElse(0.0);
-  }
-
-  private double round(double value) {
-    return Math.round(value * 100.0) / 100.0;
+    return graduateCalculator
+        .passingAverage(studentId, promotionId)
+        .map(
+            average ->
+                new GraduateResponse(
+                    student.getId(),
+                    student.getFirstName(),
+                    student.getLastName(),
+                    student.getEmail(),
+                    average));
   }
 }

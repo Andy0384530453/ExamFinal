@@ -17,6 +17,7 @@ import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.file.bucket.BucketComponent;
 import com.example.demo.mail.Email;
 import com.example.demo.mail.Mailer;
+import com.example.demo.mail.TranscriptMailComposer;
 import com.example.demo.pdf.TranscriptPdfGenerator;
 import com.example.demo.repository.JTranscriptRepository;
 import com.example.demo.repository.JUserRepository;
@@ -57,6 +58,7 @@ class TranscriptEmailRequestedServiceTest {
             transcriptDataBuilder,
             pdfGenerator,
             bucketComponent,
+            new TranscriptMailComposer(),
             mailer);
   }
 
@@ -106,7 +108,6 @@ class TranscriptEmailRequestedServiceTest {
     JTranscript transcript = new JTranscript();
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(student.getId());
-    transcript.setStatus(TranscriptStatus.PENDING);
     return transcript;
   }
 

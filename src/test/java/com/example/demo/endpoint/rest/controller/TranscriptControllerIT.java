@@ -163,10 +163,9 @@ class TranscriptControllerIT extends FacadeIT {
     persisted.setId(UUID.randomUUID());
     persisted.setStudentId(student.getId());
     persisted.setPromotionId(null);
-    persisted.setStatus(TranscriptStatus.GENERATED);
-    persisted.setPdfUrl("https://s3.example/transcript.pdf");
-    persisted.setEmail("student@school.com");
-    persisted.setGeneratedAt(Instant.parse("2024-01-01T10:00:00Z"));
+    persisted.markPending("student@school.com");
+    persisted.markGenerated(
+        "https://s3.example/transcript.pdf", Instant.parse("2024-01-01T10:00:00Z"));
     transcriptRepository.save(persisted);
     JUser admin = admin();
 

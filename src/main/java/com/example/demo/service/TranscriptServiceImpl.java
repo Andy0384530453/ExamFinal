@@ -1,6 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.config.TokenProvider;
+import com.example.demo.config.TranscriptAccessGuard;
 import com.example.demo.dto.transcript.TranscriptItemResponse;
 import com.example.demo.dto.transcript.TranscriptResponse;
 import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
@@ -19,14 +19,13 @@ import com.example.demo.repository.JUserRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TranscriptServiceImpl implements TranscriptService {
 
-  private final TokenProvider tokenProvider;
+  private final TranscriptAccessGuard accessGuard;
   private final JUserRepository userRepository;
   private final JPromotionRepository promotionRepository;
   private final JTranscriptRepository transcriptRepository;
@@ -35,14 +34,14 @@ public class TranscriptServiceImpl implements TranscriptService {
   private final EventProducer<TranscriptEmailRequested> eventProducer;
 
   public TranscriptServiceImpl(
-      TokenProvider tokenProvider,
+      TranscriptAccessGuard accessGuard,
       JUserRepository userRepository,
       JPromotionRepository promotionRepository,
       JTranscriptRepository transcriptRepository,
       TranscriptMapper transcriptMapper,
       TranscriptDataBuilder transcriptDataBuilder,
       EventProducer<TranscriptEmailRequested> eventProducer) {
-    this.tokenProvider = tokenProvider;
+    this.accessGuard = accessGuard;
     this.userRepository = userRepository;
     this.promotionRepository = promotionRepository;
     this.transcriptRepository = transcriptRepository;
@@ -53,7 +52,7 @@ public class TranscriptServiceImpl implements TranscriptService {
 
   @Override
   public TranscriptResponse getStudentTranscript(UUID studentId, UUID promotionId, Jwt jwt) {
-    checkAccess(studentId, jwt);
+    accessGuard.checkStudentAccess(studentId, jwt);
     checkStudentExists(studentId);
     checkPromotionExists(promotionId);
 
@@ -66,12 +65,11 @@ public class TranscriptServiceImpl implements TranscriptService {
 
   @Override
   public TranscriptSendEmailResponse requestTranscriptEmail(UUID studentId, Jwt jwt) {
-    checkAccess(studentId, jwt);
+    accessGuard.checkStudentAccess(studentId, jwt);
     JUser student = findStudentOrThrow(studentId);
 
     JTranscript transcript = resolveTranscript(studentId, null);
-    transcript.setStatus(TranscriptStatus.PENDING);
-    transcript.setEmail(student.getEmail());
+    transcript.markPending(student.getEmail());
     transcriptRepository.save(transcript);
 
     eventProducer.accept(
@@ -81,21 +79,6 @@ public class TranscriptServiceImpl implements TranscriptService {
         transcript.getId(),
         TranscriptStatus.PENDING,
         "Processing in progress, the transcript will be sent by email.");
-  }
-
-  private void checkAccess(UUID studentId, Jwt jwt) {
-    String role = tokenProvider.getRole(jwt);
-    if (Role.ADMIN.name().equals(role)) {
-      return;
-    }
-    if (Role.STUDENT.name().equals(role)) {
-      UUID authenticatedId = UUID.fromString(tokenProvider.getUserId(jwt));
-      if (!authenticatedId.equals(studentId)) {
-        throw new AccessDeniedException("A student can only access their own transcript");
-      }
-      return;
-    }
-    throw new AccessDeniedException("Access denied: insufficient role");
   }
 
   private void checkStudentExists(UUID studentId) {
@@ -128,7 +111,7 @@ public class TranscriptServiceImpl implements TranscriptService {
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(studentId);
     transcript.setPromotionId(promotionId);
-    transcript.setStatus(TranscriptStatus.PENDING);
+    transcript.markPending(null);
     return transcript;
   }
 }

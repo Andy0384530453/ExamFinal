@@ -183,7 +183,6 @@ class TranscriptEmailLocalstackIT {
     JTranscript transcript = new JTranscript();
     transcript.setId(UUID.randomUUID());
     transcript.setStudentId(student.getId());
-    transcript.setStatus(TranscriptStatus.PENDING);
     return transcriptRepository.save(transcript);
   }
 }

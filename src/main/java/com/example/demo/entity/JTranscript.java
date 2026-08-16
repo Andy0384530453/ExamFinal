@@ -15,14 +15,14 @@ import lombok.Setter;
 @Entity
 @Table(name = "transcript")
 @Getter
-@Setter
 public class JTranscript {
-  @Id private UUID id;
+  @Setter @Id private UUID id;
 
+  @Setter
   @Column(nullable = false)
   private UUID studentId;
 
-  private UUID promotionId;
+  @Setter private UUID promotionId;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
@@ -34,4 +34,31 @@ public class JTranscript {
   private String email;
 
   private Instant generatedAt;
+
+  public void markPending(String email) {
+    this.status = TranscriptStatus.PENDING;
+    this.email = email;
+  }
+
+  public void markGenerated(String pdfUrl, Instant generatedAt) {
+    if (status != TranscriptStatus.PENDING && status != TranscriptStatus.GENERATED) {
+      throw new IllegalStateException("Cannot mark as GENERATED from " + status);
+    }
+    this.status = TranscriptStatus.GENERATED;
+    this.pdfUrl = pdfUrl;
+    this.generatedAt = generatedAt;
+  }
+
+  public void markEmailSent() {
+    if (status != TranscriptStatus.GENERATED) {
+      throw new IllegalStateException("Cannot mark as EMAIL_SENT from " + status);
+    }
+    this.status = TranscriptStatus.EMAIL_SENT;
+  }
+
+  public void markFailed() {
+    if (status != TranscriptStatus.FAILED) {
+      this.status = TranscriptStatus.FAILED;
+    }
+  }
 }

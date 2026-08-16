@@ -53,6 +53,12 @@ public class GlobalExceptionHandler {
         HttpStatus.BAD_REQUEST, message.isEmpty() ? "Validation failed" : message, request);
   }
 
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalArgument(
+      IllegalArgumentException e, HttpServletRequest request) {
+    return build(HttpStatus.BAD_REQUEST, e.getMessage(), request);
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGeneric(Exception e, HttpServletRequest request) {
     log.error("Unhandled exception on {}", request.getRequestURI(), e);

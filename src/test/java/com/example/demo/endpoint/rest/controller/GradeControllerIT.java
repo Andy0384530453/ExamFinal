@@ -64,6 +64,8 @@ class GradeControllerIT extends FacadeIT {
     assertThat(response.getBody()).hasSize(1);
     GradeResponse body = response.getBody().get(0);
     assertThat(body.id()).isEqualTo(grade.getId());
+    assertThat(body.examId()).isEqualTo(exam.getId());
+    assertThat(body.examRef()).isEqualTo(exam.getRef());
     assertThat(body.courseTitle()).isEqualTo(course.getTitle());
     assertThat(body.value()).isEqualTo(12.0);
   }
@@ -184,7 +186,21 @@ class GradeControllerIT extends FacadeIT {
         updateGradeError(token(admin), grade.getId(), new GradeUpdateRequest(14.5, " "));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    assertThat(response.getBody().message()).isEqualTo("reason is required");
+    assertThat(response.getBody().message()).contains("reason");
+  }
+
+  @Test
+  void update_with_value_out_of_range_returns_400() {
+    JUser admin = admin();
+    JCourse course = course();
+    JExam exam = exam(course);
+    JGrade grade = grade(exam, 10.0);
+
+    ResponseEntity<ErrorResponse> response =
+        updateGradeError(token(admin), grade.getId(), new GradeUpdateRequest(25.0, "Claim"));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().message()).contains("value");
   }
 
   @Test

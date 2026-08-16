@@ -4,6 +4,7 @@ import com.example.demo.dto.grade.GradeHistoryResponse;
 import com.example.demo.dto.grade.GradeResponse;
 import com.example.demo.dto.grade.GradeUpdateRequest;
 import com.example.demo.service.GradeService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,7 +34,7 @@ public class GradeController {
   public GradeResponse updateGrade(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable("id") UUID id,
-      @RequestBody GradeUpdateRequest request) {
+      @RequestBody @Valid GradeUpdateRequest request) {
     return gradeService.updateGrade(id, request, jwt);
   }
 

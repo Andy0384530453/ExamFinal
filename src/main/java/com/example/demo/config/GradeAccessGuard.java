@@ -42,16 +42,21 @@ public class GradeAccessGuard {
     }
   }
 
-  public void checkAdminOrTeacherOfGrade(UUID gradeId, Jwt jwt) {
+  public JGrade checkAdminOrTeacherOfGrade(UUID gradeId, Jwt jwt) {
     requireAdminOrTeacher(jwt);
+    JGrade grade =
+        gradeRepository
+            .findById(gradeId)
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
     if (isAdmin(jwt)) {
-      return;
+      return grade;
     }
     UUID teacherId = userId(jwt);
-    UUID courseId = courseIdOfGrade(gradeId);
-    if (!isTeacherOfCourse(teacherId, courseId)) {
+    if (!isTeacherOfCourse(teacherId, courseIdOfGrade(grade))) {
       throw new AccessDeniedException("A teacher can only access grades of their own courses");
     }
+    return grade;
   }
 
   private void requireAdminOrTeacher(Jwt jwt) {
@@ -70,16 +75,10 @@ public class GradeAccessGuard {
   }
 
   private boolean isTeacherOfCourse(UUID teacherId, UUID courseId) {
-    return courseTeacherRepository.findByTeacherId(teacherId).stream()
-        .anyMatch(courseTeacher -> courseTeacher.getCourseId().equals(courseId));
+    return courseTeacherRepository.existsByTeacherIdAndCourseId(teacherId, courseId);
   }
 
-  private UUID courseIdOfGrade(UUID gradeId) {
-    JGrade grade =
-        gradeRepository
-            .findById(gradeId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
+  private UUID courseIdOfGrade(JGrade grade) {
     JExam exam =
         examRepository
             .findById(grade.getExamId())

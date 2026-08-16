@@ -76,6 +76,8 @@ class GradeServiceImplTest {
     GradeResponse response = grades.get(0);
     assertThat(response.id()).isEqualTo(grade.getId());
     assertThat(response.studentId()).isEqualTo(grade.getStudentId());
+    assertThat(response.examId()).isEqualTo(examId);
+    assertThat(response.examRef()).isEqualTo(exam.getRef());
     assertThat(response.courseTitle()).isEqualTo("Maths");
     assertThat(response.value()).isEqualTo(14.5);
     verify(accessGuard).checkAdminOrTeacherOfCourse(courseId, jwt);
@@ -100,8 +102,9 @@ class GradeServiceImplTest {
     UUID examId = UUID.randomUUID();
     UUID gradeId = UUID.randomUUID();
     JGrade grade = grade(examId, 10.0);
-    when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade));
-    when(examRepository.findById(examId)).thenReturn(Optional.of(exam(examId, courseId)));
+    JExam exam = exam(examId, courseId);
+    when(accessGuard.checkAdminOrTeacherOfGrade(gradeId, jwt)).thenReturn(grade);
+    when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
     when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, "Maths")));
     when(tokenProvider.getUserId(jwt)).thenReturn(userId.toString());
 
@@ -109,6 +112,9 @@ class GradeServiceImplTest {
         service.updateGrade(gradeId, new GradeUpdateRequest(14.5, "Claim"), jwt);
 
     assertThat(response.value()).isEqualTo(14.5);
+    assertThat(response.examId()).isEqualTo(examId);
+    assertThat(response.examRef()).isEqualTo(exam.getRef());
+    assertThat(response.courseTitle()).isEqualTo("Maths");
     verify(gradeRepository).save(grade);
     assertThat(grade.getValue()).isEqualTo(14.5);
     assertThat(grade.getModifiedBy()).isEqualTo(userId);
@@ -131,7 +137,7 @@ class GradeServiceImplTest {
     UUID examId = UUID.randomUUID();
     UUID gradeId = UUID.randomUUID();
     JGrade grade = grade(examId, 10.0);
-    when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade));
+    when(accessGuard.checkAdminOrTeacherOfGrade(gradeId, jwt)).thenReturn(grade);
 
     assertThatThrownBy(
             () -> service.updateGrade(gradeId, new GradeUpdateRequest(10.0, "Claim"), jwt))
@@ -142,35 +148,11 @@ class GradeServiceImplTest {
   }
 
   @Test
-  void update_grade_without_reason_throws_illegal_argument() {
-    Jwt jwt = mock(Jwt.class);
-    UUID gradeId = UUID.randomUUID();
-
-    assertThatThrownBy(() -> service.updateGrade(gradeId, new GradeUpdateRequest(10.0, " "), jwt))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("reason is required");
-
-    verify(gradeRepository, never()).save(any());
-  }
-
-  @Test
-  void update_grade_without_value_throws_illegal_argument() {
-    Jwt jwt = mock(Jwt.class);
-    UUID gradeId = UUID.randomUUID();
-
-    assertThatThrownBy(
-            () -> service.updateGrade(gradeId, new GradeUpdateRequest(null, "Claim"), jwt))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("value is required");
-
-    verify(gradeRepository, never()).save(any());
-  }
-
-  @Test
   void update_unknown_grade_throws_not_found() {
     Jwt jwt = mock(Jwt.class);
     UUID gradeId = UUID.randomUUID();
-    when(gradeRepository.findById(gradeId)).thenReturn(Optional.empty());
+    when(accessGuard.checkAdminOrTeacherOfGrade(gradeId, jwt))
+        .thenThrow(new ResourceNotFoundException("Grade not found with id: " + gradeId));
 
     assertThatThrownBy(
             () -> service.updateGrade(gradeId, new GradeUpdateRequest(14.5, "Claim"), jwt))

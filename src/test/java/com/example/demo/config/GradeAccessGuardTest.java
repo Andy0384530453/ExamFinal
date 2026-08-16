@@ -1,12 +1,12 @@
 package com.example.demo.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.example.demo.entity.JCourseTeacher;
 import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
 import com.example.demo.enums.Role;
@@ -15,7 +15,6 @@ import com.example.demo.repository.JCourseTeacherRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeRepository;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,14 +51,27 @@ class GradeAccessGuardTest {
   }
 
   @Test
+  void admin_can_access_any_grade_and_returns_it() {
+    UUID gradeId = UUID.randomUUID();
+    JGrade grade = grade(UUID.randomUUID());
+    Jwt jwt = jwt(Role.ADMIN);
+    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
+    when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade));
+
+    JGrade returned = guard.checkAdminOrTeacherOfGrade(gradeId, jwt);
+
+    assertThat(returned).isEqualTo(grade);
+  }
+
+  @Test
   void teacher_can_access_own_course() {
     UUID teacherId = UUID.randomUUID();
     UUID courseId = UUID.randomUUID();
     Jwt jwt = jwt(Role.TEACHER, teacherId);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.TEACHER.name());
     when(tokenProvider.getUserId(jwt)).thenReturn(teacherId.toString());
-    when(courseTeacherRepository.findByTeacherId(teacherId))
-        .thenReturn(List.of(courseTeacher(courseId)));
+    when(courseTeacherRepository.existsByTeacherIdAndCourseId(teacherId, courseId))
+        .thenReturn(true);
 
     assertThatCode(() -> guard.checkAdminOrTeacherOfCourse(courseId, jwt))
         .doesNotThrowAnyException();
@@ -71,7 +83,8 @@ class GradeAccessGuardTest {
     Jwt jwt = jwt(Role.TEACHER, teacherId);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.TEACHER.name());
     when(tokenProvider.getUserId(jwt)).thenReturn(teacherId.toString());
-    when(courseTeacherRepository.findByTeacherId(teacherId)).thenReturn(List.of());
+    when(courseTeacherRepository.existsByTeacherIdAndCourseId(any(UUID.class), any(UUID.class)))
+        .thenReturn(false);
 
     assertThatThrownBy(() -> guard.checkAdminOrTeacherOfCourse(UUID.randomUUID(), jwt))
         .isInstanceOf(AccessDeniedException.class);
@@ -84,14 +97,17 @@ class GradeAccessGuardTest {
     UUID examId = UUID.randomUUID();
     UUID gradeId = UUID.randomUUID();
     Jwt jwt = jwt(Role.TEACHER, teacherId);
+    JGrade grade = grade(examId);
     when(tokenProvider.getRole(jwt)).thenReturn(Role.TEACHER.name());
     when(tokenProvider.getUserId(jwt)).thenReturn(teacherId.toString());
-    when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade(examId)));
+    when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade));
     when(examRepository.findById(examId)).thenReturn(Optional.of(exam(courseId)));
-    when(courseTeacherRepository.findByTeacherId(teacherId))
-        .thenReturn(List.of(courseTeacher(courseId)));
+    when(courseTeacherRepository.existsByTeacherIdAndCourseId(teacherId, courseId))
+        .thenReturn(true);
 
-    assertThatCode(() -> guard.checkAdminOrTeacherOfGrade(gradeId, jwt)).doesNotThrowAnyException();
+    JGrade returned = guard.checkAdminOrTeacherOfGrade(gradeId, jwt);
+
+    assertThat(returned).isEqualTo(grade);
   }
 
   @Test
@@ -104,7 +120,8 @@ class GradeAccessGuardTest {
     when(tokenProvider.getUserId(jwt)).thenReturn(teacherId.toString());
     when(gradeRepository.findById(gradeId)).thenReturn(Optional.of(grade(examId)));
     when(examRepository.findById(examId)).thenReturn(Optional.of(exam(UUID.randomUUID())));
-    when(courseTeacherRepository.findByTeacherId(teacherId)).thenReturn(List.of());
+    when(courseTeacherRepository.existsByTeacherIdAndCourseId(any(UUID.class), any(UUID.class)))
+        .thenReturn(false);
 
     assertThatThrownBy(() -> guard.checkAdminOrTeacherOfGrade(gradeId, jwt))
         .isInstanceOf(AccessDeniedException.class);
@@ -144,14 +161,6 @@ class GradeAccessGuardTest {
         .issuedAt(now)
         .expiresAt(now.plusSeconds(3600))
         .build();
-  }
-
-  private static JCourseTeacher courseTeacher(UUID courseId) {
-    JCourseTeacher courseTeacher = new JCourseTeacher();
-    courseTeacher.setId(UUID.randomUUID());
-    courseTeacher.setCourseId(courseId);
-    courseTeacher.setTeacherId(UUID.randomUUID());
-    return courseTeacher;
   }
 
   private static JExam exam(UUID courseId) {

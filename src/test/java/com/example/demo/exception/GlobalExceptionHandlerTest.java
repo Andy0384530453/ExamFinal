@@ -101,6 +101,20 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void illegal_argument_returns_400_with_message() {
+    stubUri("/grades/123");
+    IllegalArgumentException e = new IllegalArgumentException("Grade already has value 14.5");
+
+    ResponseEntity<ErrorResponse> response = handler.handleIllegalArgument(e, request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    ErrorResponse body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.status()).isEqualTo(400);
+    assertThat(body.message()).isEqualTo("Grade already has value 14.5");
+  }
+
+  @Test
   void generic_exception_returns_500_without_leaking_internals() {
     stubUri("/students/123/transcript");
 

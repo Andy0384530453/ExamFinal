@@ -58,6 +58,7 @@ public class Mailer implements Consumer<Email> {
 
     var rawEmailRequest =
         SendRawEmailRequest.builder()
+            .source(emailConf.getSesSource())
             .rawMessage(RawMessage.builder().data(SdkBytes.fromByteArray(bytes)).build())
             .build();
 

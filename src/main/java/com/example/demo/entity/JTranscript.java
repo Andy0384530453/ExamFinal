@@ -28,6 +28,7 @@ public class JTranscript {
   @Column(nullable = false)
   private TranscriptStatus status = TranscriptStatus.PENDING;
 
+  @Column(length = 2048)
   private String pdfUrl;
 
   private String email;

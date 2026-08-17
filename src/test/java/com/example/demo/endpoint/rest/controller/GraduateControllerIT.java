@@ -3,6 +3,8 @@ package com.example.demo.endpoint.rest.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.demo.conf.FacadeIT;
+import com.example.demo.config.TokenProvider;
+import com.example.demo.dto.graduate.GraduatesResponse;
 import com.example.demo.entity.JCourse;
 import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
@@ -25,6 +27,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
@@ -33,6 +38,7 @@ import org.springframework.test.context.TestPropertySource;
 class GraduateControllerIT extends FacadeIT {
 
   @Autowired private TestRestTemplate restTemplate;
+  @Autowired private TokenProvider tokenProvider;
   @Autowired private JPromotionRepository promotionRepository;
   @Autowired private JGroupRepository groupRepository;
   @Autowired private JStudentGroupRepository studentGroupRepository;
@@ -82,10 +88,64 @@ class GraduateControllerIT extends FacadeIT {
   }
 
   @Test
+  void teacher_can_get_graduates_json() {
+    JPromotion promotion = promotion(2023);
+    JGroup group = group(promotion);
+    JUser student = student();
+    studentGroup(
+        student.getId(),
+        group.getId(),
+        Instant.parse("2023-09-01T08:00:00Z"),
+        Instant.parse("2024-06-30T18:00:00Z"));
+    JCourse course = course(promotion, "Mathematiques", 6);
+    JExam exam = exam(course, "2023-11-15T09:00:00Z", 1.5);
+    grade(student, exam, 14.5);
+    JUser teacher = user(Role.TEACHER);
+
+    ResponseEntity<GraduatesResponse> response = getGraduates(token(teacher), promotion.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    GraduatesResponse body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.promotionId()).isEqualTo(promotion.getId());
+    assertThat(body.promotionRef()).isEqualTo(promotion.getRef());
+    assertThat(body.promotionYear()).isEqualTo(2023);
+    assertThat(body.graduates()).hasSize(1);
+    assertThat(body.graduates().get(0).firstName()).isEqualTo("Lucas");
+    assertThat(body.graduates().get(0).lastName()).isEqualTo("Moreau");
+    assertThat(body.graduates().get(0).email()).isEqualTo(student.getEmail());
+    assertThat(body.graduates().get(0).average()).isEqualTo(14.5);
+  }
+
+  @Test
+  void admin_can_get_graduates_json() {
+    JPromotion promotion = promotion(2023);
+    JUser admin = user(Role.ADMIN);
+
+    ResponseEntity<GraduatesResponse> response = getGraduates(token(admin), promotion.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().promotionId()).isEqualTo(promotion.getId());
+    assertThat(response.getBody().graduates()).isEmpty();
+  }
+
+  @Test
+  void student_cannot_get_graduates_json() {
+    JPromotion promotion = promotion(2023);
+    JUser student = student();
+
+    ResponseEntity<ErrorResponse> response = getGraduatesError(token(student), promotion.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(response.getBody()).isNotNull();
+  }
+
+  @Test
   void unknown_promotion_returns_404() {
-    ResponseEntity<ErrorResponse> response =
-        restTemplate.getForEntity(
-            "/promotions/" + UUID.randomUUID() + "/graduates.xlsx", ErrorResponse.class);
+    JUser admin = user(Role.ADMIN);
+
+    ResponseEntity<ErrorResponse> response = getGraduatesError(token(admin), UUID.randomUUID());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     ErrorResponse body = response.getBody();
@@ -94,10 +154,45 @@ class GraduateControllerIT extends FacadeIT {
     assertThat(body.message()).contains("Promotion not found");
   }
 
+  private ResponseEntity<GraduatesResponse> getGraduates(String token, UUID promotionId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/promotions/" + promotionId + "/graduates",
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        GraduatesResponse.class);
+  }
+
+  private ResponseEntity<ErrorResponse> getGraduatesError(String token, UUID promotionId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/promotions/" + promotionId + "/graduates",
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        ErrorResponse.class);
+  }
+
+  private String token(JUser user) {
+    return tokenProvider.generateToken(user);
+  }
+
+  private JUser user(Role role) {
+    JUser user = new JUser();
+    user.setId(UUID.randomUUID());
+    user.setRef("REF-" + UUID.randomUUID());
+    user.setFirstName("First");
+    user.setLastName("Last");
+    user.setEmail(UUID.randomUUID() + "@school.com");
+    user.setRole(role);
+    return userRepository.save(user);
+  }
+
   private JPromotion promotion(int year) {
     JPromotion promotion = new JPromotion();
     promotion.setId(UUID.randomUUID());
-    promotion.setRef("P-" + year);
+    promotion.setRef("P-" + year + "-" + UUID.randomUUID());
     promotion.setYear(year);
     return promotionRepository.save(promotion);
   }
@@ -105,7 +200,7 @@ class GraduateControllerIT extends FacadeIT {
   private JGroup group(JPromotion promotion) {
     JGroup group = new JGroup();
     group.setId(UUID.randomUUID());
-    group.setRef("GRP-" + promotion.getYear());
+    group.setRef("GRP-" + UUID.randomUUID());
     group.setPromotionId(promotion.getId());
     return groupRepository.save(group);
   }

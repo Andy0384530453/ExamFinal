@@ -157,6 +157,131 @@ class TranscriptControllerIT extends FacadeIT {
   }
 
   @Test
+  void get_transcript_by_id_returns_status_and_s3_link() {
+    JUser student = student();
+    JTranscript persisted = new JTranscript();
+    persisted.setId(UUID.randomUUID());
+    persisted.setStudentId(student.getId());
+    persisted.setPromotionId(null);
+    persisted.markPending("student@school.com");
+    persisted.markGenerated(
+        "https://s3.example/transcript.pdf", Instant.parse("2024-01-01T10:00:00Z"));
+    transcriptRepository.save(persisted);
+    JUser admin = admin();
+
+    ResponseEntity<TranscriptResponse> response =
+        getTranscriptById(token(admin), persisted.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    TranscriptResponse body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.id()).isEqualTo(persisted.getId());
+    assertThat(body.studentId()).isEqualTo(student.getId());
+    assertThat(body.status()).isEqualTo(TranscriptStatus.GENERATED);
+    assertThat(body.pdfUrl()).isEqualTo("https://s3.example/transcript.pdf");
+    assertThat(body.email()).isEqualTo("student@school.com");
+    assertThat(body.generatedAt()).isEqualTo(Instant.parse("2024-01-01T10:00:00Z"));
+  }
+
+  @Test
+  void student_can_get_own_transcript_by_id() {
+    JUser student = student();
+    JTranscript persisted = new JTranscript();
+    persisted.setId(UUID.randomUUID());
+    persisted.setStudentId(student.getId());
+    persisted.markPending(student.getEmail());
+    transcriptRepository.save(persisted);
+
+    ResponseEntity<TranscriptResponse> response =
+        getTranscriptById(token(student), persisted.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().id()).isEqualTo(persisted.getId());
+  }
+
+  @Test
+  void student_cannot_get_another_student_transcript_by_id() {
+    JUser student = student();
+    JUser otherStudent = student();
+    JTranscript persisted = new JTranscript();
+    persisted.setId(UUID.randomUUID());
+    persisted.setStudentId(otherStudent.getId());
+    persisted.markPending(otherStudent.getEmail());
+    transcriptRepository.save(persisted);
+
+    ResponseEntity<ErrorResponse> response =
+        getTranscriptByIdError(token(student), persisted.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().message()).isNotBlank();
+  }
+
+  @Test
+  void unknown_transcript_returns_404() {
+    JUser admin = admin();
+
+    ResponseEntity<ErrorResponse> response =
+        getTranscriptByIdError(token(admin), UUID.randomUUID());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody().message()).contains("Transcript not found");
+  }
+
+  @Test
+  void download_pdf_returns_pdf_bytes() {
+    JUser student = student();
+    grade(
+        student, exam(course(promotion(), "Mathematiques", 6), "2023-11-15T09:00:00Z", 1.5), 14.5);
+    JUser admin = admin();
+
+    ResponseEntity<byte[]> response = downloadPdf(token(admin), student.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getContentType()).isNotNull();
+    assertThat(response.getHeaders().getContentType().getSubtype()).isEqualTo("pdf");
+    assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION))
+        .contains("transcript.pdf");
+    byte[] body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(new String(body, java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF");
+  }
+
+  @Test
+  void student_can_download_own_pdf() {
+    JUser student = student();
+
+    ResponseEntity<byte[]> response = downloadPdf(token(student), student.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getBody()).isNotEmpty();
+  }
+
+  @Test
+  void student_cannot_download_another_student_pdf() {
+    JUser student = student();
+    JUser otherStudent = student();
+
+    ResponseEntity<ErrorResponse> response = downloadPdfError(token(student), otherStudent.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(response.getBody()).isNotNull();
+  }
+
+  @Test
+  void download_pdf_of_unknown_student_returns_404() {
+    JUser admin = admin();
+
+    ResponseEntity<ErrorResponse> response = downloadPdfError(token(admin), UUID.randomUUID());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(response.getBody()).isNotNull();
+  }
+
+  @Test
   void reuses_persisted_transcript_information() {
     JUser student = student();
     JTranscript persisted = new JTranscript();
@@ -190,6 +315,46 @@ class TranscriptControllerIT extends FacadeIT {
     assertThat(body.error()).isNotBlank();
     assertThat(body.message()).isNotBlank();
     assertThat(body.path()).startsWith("/students/");
+  }
+
+  private ResponseEntity<TranscriptResponse> getTranscriptById(String token, UUID transcriptId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/transcripts/" + transcriptId,
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        TranscriptResponse.class);
+  }
+
+  private ResponseEntity<ErrorResponse> getTranscriptByIdError(String token, UUID transcriptId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/transcripts/" + transcriptId,
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        ErrorResponse.class);
+  }
+
+  private ResponseEntity<byte[]> downloadPdf(String token, UUID studentId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/students/" + studentId + "/transcript/pdf",
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        byte[].class);
+  }
+
+  private ResponseEntity<ErrorResponse> downloadPdfError(String token, UUID studentId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/students/" + studentId + "/transcript/pdf",
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        ErrorResponse.class);
   }
 
   private ResponseEntity<TranscriptResponse> getTranscript(

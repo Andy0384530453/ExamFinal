@@ -13,12 +13,16 @@ import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.TranscriptMapper;
+import com.example.demo.pdf.TranscriptPdfGenerator;
 import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JTranscriptRepository;
 import com.example.demo.repository.JUserRepository;
+import java.io.File;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.SneakyThrows;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +35,7 @@ public class TranscriptServiceImpl implements TranscriptService {
   private final JTranscriptRepository transcriptRepository;
   private final TranscriptMapper transcriptMapper;
   private final TranscriptDataBuilder transcriptDataBuilder;
+  private final TranscriptPdfGenerator pdfGenerator;
   private final EventProducer<TranscriptEmailRequested> eventProducer;
 
   public TranscriptServiceImpl(
@@ -40,6 +45,7 @@ public class TranscriptServiceImpl implements TranscriptService {
       JTranscriptRepository transcriptRepository,
       TranscriptMapper transcriptMapper,
       TranscriptDataBuilder transcriptDataBuilder,
+      TranscriptPdfGenerator pdfGenerator,
       EventProducer<TranscriptEmailRequested> eventProducer) {
     this.accessGuard = accessGuard;
     this.userRepository = userRepository;
@@ -47,6 +53,7 @@ public class TranscriptServiceImpl implements TranscriptService {
     this.transcriptRepository = transcriptRepository;
     this.transcriptMapper = transcriptMapper;
     this.transcriptDataBuilder = transcriptDataBuilder;
+    this.pdfGenerator = pdfGenerator;
     this.eventProducer = eventProducer;
   }
 
@@ -61,6 +68,36 @@ public class TranscriptServiceImpl implements TranscriptService {
     List<TranscriptItemResponse> itemResponses =
         items.stream().map(transcriptMapper::toItemResponse).toList();
     return transcriptMapper.toResponse(transcript, itemResponses);
+  }
+
+  @Override
+  public TranscriptResponse getTranscript(UUID transcriptId, Jwt jwt) {
+    JTranscript transcript =
+        transcriptRepository
+            .findById(transcriptId)
+            .orElseThrow(
+                () ->
+                    new ResourceNotFoundException("Transcript not found with id: " + transcriptId));
+    accessGuard.checkStudentAccess(transcript.getStudentId(), jwt);
+    List<JTranscriptItem> items =
+        transcriptDataBuilder.buildItems(transcript.getStudentId(), transcript.getPromotionId());
+    List<TranscriptItemResponse> itemResponses =
+        items.stream().map(transcriptMapper::toItemResponse).toList();
+    return transcriptMapper.toResponse(transcript, itemResponses);
+  }
+
+  @Override
+  @SneakyThrows
+  public byte[] downloadTranscriptPdf(UUID studentId, Jwt jwt) {
+    accessGuard.checkStudentAccess(studentId, jwt);
+    JUser student = findStudentOrThrow(studentId);
+    List<JTranscriptItem> items = transcriptDataBuilder.buildItems(studentId, null);
+    File pdf = pdfGenerator.generate(UUID.randomUUID(), student, items);
+    try {
+      return Files.readAllBytes(pdf.toPath());
+    } finally {
+      pdf.delete();
+    }
   }
 
   @Override

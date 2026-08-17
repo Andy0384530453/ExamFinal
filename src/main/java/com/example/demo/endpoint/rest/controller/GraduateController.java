@@ -1,5 +1,6 @@
 package com.example.demo.endpoint.rest.controller;
 
+import com.example.demo.dto.graduate.GraduatesResponse;
 import com.example.demo.service.GraduateService;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +20,11 @@ public class GraduateController {
 
   public GraduateController(GraduateService graduateService) {
     this.graduateService = graduateService;
+  }
+
+  @GetMapping("/promotions/{id}/graduates")
+  public GraduatesResponse getGraduates(@PathVariable("id") UUID id) {
+    return graduateService.getGraduatesResponse(id);
   }
 
   @GetMapping("/promotions/{id}/graduates.xlsx")

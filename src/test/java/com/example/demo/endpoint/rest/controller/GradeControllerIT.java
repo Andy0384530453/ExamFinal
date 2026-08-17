@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.demo.conf.FacadeIT;
 import com.example.demo.config.TokenProvider;
+import com.example.demo.dto.grade.GradeCreateRequest;
 import com.example.demo.dto.grade.GradeHistoryResponse;
 import com.example.demo.dto.grade.GradeResponse;
 import com.example.demo.dto.grade.GradeUpdateRequest;
@@ -49,6 +50,142 @@ class GradeControllerIT extends FacadeIT {
   @Autowired private JGradeRepository gradeRepository;
   @Autowired private JCourseTeacherRepository courseTeacherRepository;
   @Autowired private JGradeModificationRepository gradeModificationRepository;
+
+  @Test
+  void teacher_creates_grade_of_own_course() {
+    JUser teacher = teacher();
+    JUser student = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+    teach(teacher, course);
+
+    ResponseEntity<GradeResponse> response =
+        createGrade(
+            token(teacher),
+            course.getId(),
+            new GradeCreateRequest(student.getId(), exam.getId(), 16.0, "Very good"));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    GradeResponse body = response.getBody();
+    assertThat(body.studentId()).isEqualTo(student.getId());
+    assertThat(body.examId()).isEqualTo(exam.getId());
+    assertThat(body.examRef()).isEqualTo(exam.getRef());
+    assertThat(body.courseTitle()).isEqualTo(course.getTitle());
+    assertThat(body.value()).isEqualTo(16.0);
+    assertThat(body.comment()).isEqualTo("Very good");
+
+    JGrade persisted = gradeRepository.findById(body.id()).orElseThrow();
+    assertThat(persisted.getStudentId()).isEqualTo(student.getId());
+    assertThat(persisted.getExamId()).isEqualTo(exam.getId());
+    assertThat(persisted.getValue()).isEqualTo(16.0);
+    assertThat(persisted.getModifiedBy()).isEqualTo(teacher.getId());
+    assertThat(persisted.getModifiedAt()).isNotNull();
+  }
+
+  @Test
+  void teacher_cannot_create_grade_of_another_course() {
+    JUser teacher = teacher();
+    JUser student = student();
+    JCourse course = course();
+    JCourse otherCourse = course();
+    JExam exam = exam(course);
+    teach(teacher, otherCourse);
+
+    ResponseEntity<ErrorResponse> response =
+        createGradeError(
+            token(teacher),
+            course.getId(),
+            new GradeCreateRequest(student.getId(), exam.getId(), 16.0, null));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(gradeRepository.findByStudentIdAndExamId(student.getId(), exam.getId())).isEmpty();
+  }
+
+  @Test
+  void admin_creates_grade_of_any_course() {
+    JUser admin = admin();
+    JUser student = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+
+    ResponseEntity<GradeResponse> response =
+        createGrade(
+            token(admin),
+            course.getId(),
+            new GradeCreateRequest(student.getId(), exam.getId(), 12.5, null));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    assertThat(response.getBody().value()).isEqualTo(12.5);
+  }
+
+  @Test
+  void duplicate_grade_returns_409() {
+    JUser admin = admin();
+    JUser student = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+    grade(exam, 10.0, student);
+
+    ResponseEntity<ErrorResponse> response =
+        createGradeError(
+            token(admin),
+            course.getId(),
+            new GradeCreateRequest(student.getId(), exam.getId(), 16.0, null));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    assertThat(response.getBody().message()).contains("already exists");
+  }
+
+  @Test
+  void create_grade_with_exam_of_another_course_returns_400() {
+    JUser admin = admin();
+    JUser student = student();
+    JCourse course = course();
+    JCourse otherCourse = course();
+    JExam exam = exam(otherCourse);
+
+    ResponseEntity<ErrorResponse> response =
+        createGradeError(
+            token(admin),
+            course.getId(),
+            new GradeCreateRequest(student.getId(), exam.getId(), 16.0, null));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().message()).contains("does not belong to course");
+  }
+
+  @Test
+  void create_grade_with_value_out_of_range_returns_400() {
+    JUser admin = admin();
+    JUser student = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+
+    ResponseEntity<ErrorResponse> response =
+        createGradeError(
+            token(admin),
+            course.getId(),
+            new GradeCreateRequest(student.getId(), exam.getId(), 25.0, null));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().message()).contains("value");
+  }
+
+  @Test
+  void create_grade_with_unknown_student_returns_404() {
+    JUser admin = admin();
+    JCourse course = course();
+    JExam exam = exam(course);
+
+    ResponseEntity<ErrorResponse> response =
+        createGradeError(
+            token(admin),
+            course.getId(),
+            new GradeCreateRequest(UUID.randomUUID(), exam.getId(), 16.0, null));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(response.getBody().message()).contains("Student not found");
+  }
 
   @Test
   void teacher_can_list_grades_of_own_course() {
@@ -277,6 +414,28 @@ class GradeControllerIT extends FacadeIT {
         updateGradeError(token(teacher), grade.getId(), new GradeUpdateRequest(14.5, "Claim"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+  }
+
+  private ResponseEntity<GradeResponse> createGrade(
+      String token, UUID courseId, GradeCreateRequest request) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/courses/" + courseId + "/grades",
+        HttpMethod.POST,
+        new HttpEntity<>(request, headers),
+        GradeResponse.class);
+  }
+
+  private ResponseEntity<ErrorResponse> createGradeError(
+      String token, UUID courseId, GradeCreateRequest request) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/courses/" + courseId + "/grades",
+        HttpMethod.POST,
+        new HttpEntity<>(request, headers),
+        ErrorResponse.class);
   }
 
   private ResponseEntity<List<GradeResponse>> listGrades(String token, UUID courseId) {

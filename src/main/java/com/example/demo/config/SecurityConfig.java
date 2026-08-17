@@ -107,6 +107,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/courses/{id}/groups")
                     .hasAnyRole("ADMIN", "TEACHER")
                     .requestMatchers(HttpMethod.DELETE, "/courses/{id}/groups/{groupId}")
+                    .requestMatchers(HttpMethod.POST, "/courses/{courseId}/grades")
                     .hasAnyRole("ADMIN", "TEACHER")
                     .requestMatchers(HttpMethod.POST, "/courses/{courseId}/grades")
                     .hasAnyRole("ADMIN", "TEACHER")

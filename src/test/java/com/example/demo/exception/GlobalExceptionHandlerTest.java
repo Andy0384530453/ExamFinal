@@ -101,6 +101,21 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void conflict_returns_409_with_message() {
+    stubUri("/courses/123/grades");
+
+    ResponseEntity<ErrorResponse> response =
+        handler.handleConflict(
+            new ConflictException("A grade already exists for student 1 on exam 2"), request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    ErrorResponse body = response.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.status()).isEqualTo(409);
+    assertThat(body.message()).isEqualTo("A grade already exists for student 1 on exam 2");
+  }
+
+  @Test
   void illegal_argument_returns_400_with_message() {
     stubUri("/grades/123");
     IllegalArgumentException e = new IllegalArgumentException("Grade already has value 14.5");

@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.grade.GradeCreateRequest;
 import com.example.demo.dto.grade.GradeHistoryResponse;
 import com.example.demo.dto.grade.GradeResponse;
 import com.example.demo.dto.grade.GradeUpdateRequest;
@@ -8,6 +9,8 @@ import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 public interface GradeService {
+
+  GradeResponse createGrade(UUID courseId, GradeCreateRequest request, Jwt jwt);
 
   List<GradeResponse> listGradesForCourse(UUID courseId, Jwt jwt);
 

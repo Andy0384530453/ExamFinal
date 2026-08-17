@@ -11,6 +11,8 @@ public interface GradeService {
 
   List<GradeResponse> listGradesForCourse(UUID courseId, Jwt jwt);
 
+  List<GradeResponse> listGradesForStudent(UUID studentId, Jwt jwt);
+
   GradeResponse updateGrade(UUID gradeId, GradeUpdateRequest request, Jwt jwt);
 
   List<GradeHistoryResponse> getGradeHistory(UUID gradeId, Jwt jwt);

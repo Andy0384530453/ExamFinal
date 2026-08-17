@@ -105,6 +105,67 @@ class GradeControllerIT extends FacadeIT {
   }
 
   @Test
+  void student_can_list_own_grades() {
+    JUser student = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+    JGrade grade = grade(exam, 15.0, student);
+
+    ResponseEntity<List<GradeResponse>> response =
+        listStudentGrades(token(student), student.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).hasSize(1);
+    GradeResponse body = response.getBody().get(0);
+    assertThat(body.id()).isEqualTo(grade.getId());
+    assertThat(body.studentId()).isEqualTo(student.getId());
+    assertThat(body.examId()).isEqualTo(exam.getId());
+    assertThat(body.examRef()).isEqualTo(exam.getRef());
+    assertThat(body.courseTitle()).isEqualTo(course.getTitle());
+    assertThat(body.value()).isEqualTo(15.0);
+  }
+
+  @Test
+  void student_cannot_list_another_student_grades() {
+    JUser student = student();
+    JUser otherStudent = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+    grade(exam, 15.0, otherStudent);
+
+    ResponseEntity<ErrorResponse> response =
+        listStudentGradesError(token(student), otherStudent.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+  }
+
+  @Test
+  void admin_can_list_any_student_grades() {
+    JUser admin = admin();
+    JUser student = student();
+    JCourse course = course();
+    JExam exam = exam(course);
+    grade(exam, 11.0, student);
+
+    ResponseEntity<List<GradeResponse>> response = listStudentGrades(token(admin), student.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).hasSize(1);
+    assertThat(response.getBody().get(0).studentId()).isEqualTo(student.getId());
+  }
+
+  @Test
+  void teacher_cannot_list_student_grades() {
+    JUser teacher = teacher();
+    JUser student = student();
+
+    ResponseEntity<ErrorResponse> response =
+        listStudentGradesError(token(teacher), student.getId());
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+  }
+
+  @Test
   void teacher_updates_grade_of_own_course_writes_history() {
     JUser teacher = teacher();
     JCourse course = course();
@@ -238,6 +299,26 @@ class GradeControllerIT extends FacadeIT {
         ErrorResponse.class);
   }
 
+  private ResponseEntity<List<GradeResponse>> listStudentGrades(String token, UUID studentId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/students/" + studentId + "/grades",
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        new ParameterizedTypeReference<>() {});
+  }
+
+  private ResponseEntity<ErrorResponse> listStudentGradesError(String token, UUID studentId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    return restTemplate.exchange(
+        "/students/" + studentId + "/grades",
+        HttpMethod.GET,
+        new HttpEntity<>(headers),
+        ErrorResponse.class);
+  }
+
   private ResponseEntity<GradeResponse> updateGrade(
       String token, UUID gradeId, GradeUpdateRequest request) {
     HttpHeaders headers = new HttpHeaders();
@@ -327,9 +408,13 @@ class GradeControllerIT extends FacadeIT {
   }
 
   private JGrade grade(JExam exam, double value) {
+    return grade(exam, value, student());
+  }
+
+  private JGrade grade(JExam exam, double value, JUser student) {
     JGrade grade = new JGrade();
     grade.setId(UUID.randomUUID());
-    grade.setStudentId(student().getId());
+    grade.setStudentId(student.getId());
     grade.setExamId(exam.getId());
     grade.setValue(value);
     grade.setModifiedAt(Instant.now());

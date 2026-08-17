@@ -67,6 +67,31 @@ public class GradeServiceImpl implements GradeService {
   }
 
   @Override
+  public List<GradeResponse> listGradesForStudent(UUID studentId, Jwt jwt) {
+    accessGuard.checkAdminOrStudentSelf(studentId, jwt);
+    List<JGrade> grades = gradeRepository.findByStudentId(studentId);
+    if (grades.isEmpty()) {
+      return List.of();
+    }
+    List<UUID> examIds = grades.stream().map(JGrade::getExamId).distinct().toList();
+    Map<UUID, JExam> examsById =
+        examRepository.findAllById(examIds).stream()
+            .collect(Collectors.toMap(JExam::getId, exam -> exam));
+    List<UUID> courseIds = examsById.values().stream().map(JExam::getCourseId).distinct().toList();
+    Map<UUID, String> courseTitles =
+        courseRepository.findAllById(courseIds).stream()
+            .collect(Collectors.toMap(JCourse::getId, JCourse::getTitle));
+    return grades.stream()
+        .map(
+            grade -> {
+              JExam exam = examsById.get(grade.getExamId());
+              return toResponse(
+                  grade, courseTitles.get(exam.getCourseId()), grade.getExamId(), exam.getRef());
+            })
+        .toList();
+  }
+
+  @Override
   @Transactional
   public GradeResponse updateGrade(UUID gradeId, GradeUpdateRequest request, Jwt jwt) {
     JGrade grade = accessGuard.checkAdminOrTeacherOfGrade(gradeId, jwt);

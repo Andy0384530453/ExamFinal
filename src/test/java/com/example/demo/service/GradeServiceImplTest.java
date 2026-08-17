@@ -95,6 +95,44 @@ class GradeServiceImplTest {
   }
 
   @Test
+  void list_grades_for_student_returns_mapped_grades() {
+    Jwt jwt = mock(Jwt.class);
+    UUID studentId = UUID.randomUUID();
+    UUID courseId = UUID.randomUUID();
+    UUID examId = UUID.randomUUID();
+    JExam exam = exam(examId, courseId);
+    JGrade grade = grade(examId, 13.0);
+    grade.setStudentId(studentId);
+    when(gradeRepository.findByStudentId(studentId)).thenReturn(List.of(grade));
+    when(examRepository.findAllById(List.of(examId))).thenReturn(List.of(exam));
+    when(courseRepository.findAllById(List.of(courseId)))
+        .thenReturn(List.of(course(courseId, "Maths")));
+
+    List<GradeResponse> grades = service.listGradesForStudent(studentId, jwt);
+
+    assertThat(grades).hasSize(1);
+    GradeResponse response = grades.get(0);
+    assertThat(response.id()).isEqualTo(grade.getId());
+    assertThat(response.studentId()).isEqualTo(studentId);
+    assertThat(response.examId()).isEqualTo(examId);
+    assertThat(response.examRef()).isEqualTo(exam.getRef());
+    assertThat(response.courseTitle()).isEqualTo("Maths");
+    assertThat(response.value()).isEqualTo(13.0);
+    verify(accessGuard).checkAdminOrStudentSelf(studentId, jwt);
+  }
+
+  @Test
+  void list_grades_for_student_without_grades_returns_empty() {
+    Jwt jwt = mock(Jwt.class);
+    UUID studentId = UUID.randomUUID();
+    when(gradeRepository.findByStudentId(studentId)).thenReturn(List.of());
+
+    List<GradeResponse> grades = service.listGradesForStudent(studentId, jwt);
+
+    assertThat(grades).isEmpty();
+  }
+
+  @Test
   void update_grade_writes_history_and_updates_value() {
     Jwt jwt = mock(Jwt.class);
     UUID userId = UUID.randomUUID();

@@ -192,7 +192,7 @@ class GraduateControllerIT extends FacadeIT {
   private JPromotion promotion(int year) {
     JPromotion promotion = new JPromotion();
     promotion.setId(UUID.randomUUID());
-    promotion.setRef("P-" + year);
+    promotion.setRef("P-" + year + "-" + UUID.randomUUID());
     promotion.setYear(year);
     return promotionRepository.save(promotion);
   }
@@ -200,7 +200,7 @@ class GraduateControllerIT extends FacadeIT {
   private JGroup group(JPromotion promotion) {
     JGroup group = new JGroup();
     group.setId(UUID.randomUUID());
-    group.setRef("GRP-" + promotion.getYear());
+    group.setRef("GRP-" + UUID.randomUUID());
     group.setPromotionId(promotion.getId());
     return groupRepository.save(group);
   }

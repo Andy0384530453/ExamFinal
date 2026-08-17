@@ -4,7 +4,9 @@ import com.example.demo.dto.transcript.TranscriptResponse;
 import com.example.demo.dto.transcript.TranscriptSendEmailResponse;
 import com.example.demo.service.TranscriptService;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -29,6 +31,22 @@ public class TranscriptController {
       @PathVariable("id") UUID id,
       @RequestParam(value = "promotionId", required = false) UUID promotionId) {
     return transcriptService.getStudentTranscript(id, promotionId, jwt);
+  }
+
+  @GetMapping("/transcripts/{id}")
+  public TranscriptResponse getTranscript(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+    return transcriptService.getTranscript(id, jwt);
+  }
+
+  @GetMapping("/students/{id}/transcript/pdf")
+  public ResponseEntity<byte[]> downloadTranscriptPdf(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+    byte[] pdf = transcriptService.downloadTranscriptPdf(id, jwt);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=transcript.pdf")
+        .contentType(MediaType.APPLICATION_PDF)
+        .body(pdf);
   }
 
   @PostMapping("/students/{id}/transcript/send-email")

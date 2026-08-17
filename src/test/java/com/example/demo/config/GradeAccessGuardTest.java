@@ -148,6 +148,45 @@ class GradeAccessGuardTest {
         .isInstanceOf(AccessDeniedException.class);
   }
 
+  @Test
+  void admin_can_access_any_student_grades() {
+    Jwt jwt = jwt(Role.ADMIN);
+    when(tokenProvider.getRole(jwt)).thenReturn(Role.ADMIN.name());
+
+    assertThatCode(() -> guard.checkAdminOrStudentSelf(UUID.randomUUID(), jwt))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void student_can_access_own_grades() {
+    UUID studentId = UUID.randomUUID();
+    Jwt jwt = jwt(Role.STUDENT, studentId);
+    when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
+    when(tokenProvider.getUserId(jwt)).thenReturn(studentId.toString());
+
+    assertThatCode(() -> guard.checkAdminOrStudentSelf(studentId, jwt)).doesNotThrowAnyException();
+  }
+
+  @Test
+  void student_cannot_access_another_student_grades() {
+    Jwt jwt = jwt(Role.STUDENT, UUID.randomUUID());
+    when(tokenProvider.getRole(jwt)).thenReturn(Role.STUDENT.name());
+    when(tokenProvider.getUserId(jwt)).thenReturn(UUID.randomUUID().toString());
+
+    assertThatThrownBy(() -> guard.checkAdminOrStudentSelf(UUID.randomUUID(), jwt))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("own grades");
+  }
+
+  @Test
+  void teacher_cannot_access_student_grades() {
+    Jwt jwt = jwt(Role.TEACHER);
+    when(tokenProvider.getRole(jwt)).thenReturn(Role.TEACHER.name());
+
+    assertThatThrownBy(() -> guard.checkAdminOrStudentSelf(UUID.randomUUID(), jwt))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
   private static Jwt jwt(Role role) {
     return jwt(role, UUID.randomUUID());
   }

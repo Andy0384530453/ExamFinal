@@ -59,6 +59,21 @@ public class GradeAccessGuard {
     return grade;
   }
 
+  public void checkAdminOrStudentSelf(UUID studentId, Jwt jwt) {
+    String role = tokenProvider.getRole(jwt);
+    if (Role.ADMIN.name().equals(role)) {
+      return;
+    }
+    if (Role.STUDENT.name().equals(role)) {
+      UUID authenticatedId = userId(jwt);
+      if (!authenticatedId.equals(studentId)) {
+        throw new AccessDeniedException("A student can only access their own grades");
+      }
+      return;
+    }
+    throw new AccessDeniedException("Access denied: insufficient role");
+  }
+
   private void requireAdminOrTeacher(Jwt jwt) {
     String role = tokenProvider.getRole(jwt);
     if (!Role.ADMIN.name().equals(role) && !Role.TEACHER.name().equals(role)) {

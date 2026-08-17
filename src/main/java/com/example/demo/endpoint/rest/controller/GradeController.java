@@ -30,6 +30,12 @@ public class GradeController {
     return gradeService.listGradesForCourse(courseId, jwt);
   }
 
+  @GetMapping("/students/{id}/grades")
+  public List<GradeResponse> listGradesForStudent(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+    return gradeService.listGradesForStudent(id, jwt);
+  }
+
   @PutMapping("/grades/{id}")
   public GradeResponse updateGrade(
       @AuthenticationPrincipal Jwt jwt,

@@ -78,6 +78,8 @@ public class SecurityConfig {
                 authorize
                     .requestMatchers(HttpMethod.GET, "/promotions")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/promotions/{id}/graduates")
+                    .hasAnyRole("ADMIN", "TEACHER")
                     .requestMatchers(HttpMethod.GET, "/promotions/{id}/graduates.xlsx")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/promotions/{id}/results")

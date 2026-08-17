@@ -1,7 +1,9 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.graduate.GraduateResponse;
+import com.example.demo.dto.graduate.GraduatesResponse;
 import com.example.demo.entity.JGroup;
+import com.example.demo.entity.JPromotion;
 import com.example.demo.entity.JStudentGroup;
 import com.example.demo.entity.JUser;
 import com.example.demo.excel.GraduateExcelGenerator;
@@ -59,6 +61,17 @@ public class GraduateServiceImpl implements GraduateService {
             Comparator.comparing(GraduateResponse::lastName)
                 .thenComparing(GraduateResponse::firstName))
         .toList();
+  }
+
+  @Override
+  public GraduatesResponse getGraduatesResponse(UUID promotionId) {
+    JPromotion promotion =
+        promotionRepository
+            .findById(promotionId)
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Promotion not found with id: " + promotionId));
+    return new GraduatesResponse(
+        promotion.getId(), promotion.getRef(), promotion.getYear(), getGraduates(promotionId));
   }
 
   @Override

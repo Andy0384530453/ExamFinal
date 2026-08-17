@@ -9,5 +9,9 @@ public interface TranscriptService {
 
   TranscriptResponse getStudentTranscript(UUID studentId, UUID promotionId, Jwt jwt);
 
+  TranscriptResponse getTranscript(UUID transcriptId, Jwt jwt);
+
+  byte[] downloadTranscriptPdf(UUID studentId, Jwt jwt);
+
   TranscriptSendEmailResponse requestTranscriptEmail(UUID studentId, Jwt jwt);
 }

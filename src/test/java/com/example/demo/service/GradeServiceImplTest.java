@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.demo.config.GradeAccessGuard;
 import com.example.demo.config.TokenProvider;
+import com.example.demo.dto.grade.GradeCreateRequest;
 import com.example.demo.dto.grade.GradeHistoryResponse;
 import com.example.demo.dto.grade.GradeResponse;
 import com.example.demo.dto.grade.GradeUpdateRequest;
@@ -17,11 +18,13 @@ import com.example.demo.entity.JCourse;
 import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
 import com.example.demo.entity.JGradeModification;
+import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeModificationRepository;
 import com.example.demo.repository.JGradeRepository;
+import com.example.demo.repository.JUserRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +42,7 @@ class GradeServiceImplTest {
   private JExamRepository examRepository;
   private JCourseRepository courseRepository;
   private JGradeModificationRepository gradeModificationRepository;
+  private JUserRepository userRepository;
   private GradeServiceImpl service;
 
   @BeforeEach
@@ -49,6 +53,7 @@ class GradeServiceImplTest {
     examRepository = mock(JExamRepository.class);
     courseRepository = mock(JCourseRepository.class);
     gradeModificationRepository = mock(JGradeModificationRepository.class);
+    userRepository = mock(JUserRepository.class);
     service =
         new GradeServiceImpl(
             accessGuard,
@@ -56,7 +61,119 @@ class GradeServiceImplTest {
             gradeRepository,
             examRepository,
             courseRepository,
-            gradeModificationRepository);
+            gradeModificationRepository,
+            userRepository);
+  }
+
+  @Test
+  void create_grade_persists_and_returns_mapped_response() {
+    Jwt jwt = mock(Jwt.class);
+    UUID userId = UUID.randomUUID();
+    UUID courseId = UUID.randomUUID();
+    UUID examId = UUID.randomUUID();
+    UUID studentId = UUID.randomUUID();
+    JExam exam = exam(examId, courseId);
+    when(userRepository.existsById(studentId)).thenReturn(true);
+    when(examRepository.findById(examId)).thenReturn(Optional.of(exam));
+    when(gradeRepository.findByStudentIdAndExamId(studentId, examId)).thenReturn(Optional.empty());
+    when(tokenProvider.getUserId(jwt)).thenReturn(userId.toString());
+    when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId, "Maths")));
+
+    GradeResponse response =
+        service.createGrade(courseId, new GradeCreateRequest(studentId, examId, 16.0, "Nice"), jwt);
+
+    assertThat(response.studentId()).isEqualTo(studentId);
+    assertThat(response.examId()).isEqualTo(examId);
+    assertThat(response.examRef()).isEqualTo(exam.getRef());
+    assertThat(response.courseTitle()).isEqualTo("Maths");
+    assertThat(response.value()).isEqualTo(16.0);
+    assertThat(response.comment()).isEqualTo("Nice");
+    verify(accessGuard).checkAdminOrTeacherOfCourse(courseId, jwt);
+
+    ArgumentCaptor<JGrade> captor = ArgumentCaptor.forClass(JGrade.class);
+    verify(gradeRepository).save(captor.capture());
+    JGrade saved = captor.getValue();
+    assertThat(saved.getId()).isNotNull();
+    assertThat(saved.getStudentId()).isEqualTo(studentId);
+    assertThat(saved.getExamId()).isEqualTo(examId);
+    assertThat(saved.getValue()).isEqualTo(16.0);
+    assertThat(saved.getModifiedBy()).isEqualTo(userId);
+    assertThat(saved.getModifiedAt()).isNotNull();
+  }
+
+  @Test
+  void create_grade_with_exam_of_another_course_throws_illegal_argument() {
+    Jwt jwt = mock(Jwt.class);
+    UUID courseId = UUID.randomUUID();
+    UUID otherCourseId = UUID.randomUUID();
+    UUID examId = UUID.randomUUID();
+    UUID studentId = UUID.randomUUID();
+    when(userRepository.existsById(studentId)).thenReturn(true);
+    when(examRepository.findById(examId)).thenReturn(Optional.of(exam(examId, otherCourseId)));
+
+    assertThatThrownBy(
+            () ->
+                service.createGrade(
+                    courseId, new GradeCreateRequest(studentId, examId, 14.0, null), jwt))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("does not belong to course");
+
+    verify(gradeRepository, never()).save(any());
+  }
+
+  @Test
+  void create_grade_when_already_exists_throws_conflict() {
+    Jwt jwt = mock(Jwt.class);
+    UUID courseId = UUID.randomUUID();
+    UUID examId = UUID.randomUUID();
+    UUID studentId = UUID.randomUUID();
+    JGrade existing = grade(examId, 10.0);
+    when(userRepository.existsById(studentId)).thenReturn(true);
+    when(examRepository.findById(examId)).thenReturn(Optional.of(exam(examId, courseId)));
+    when(gradeRepository.findByStudentIdAndExamId(studentId, examId))
+        .thenReturn(Optional.of(existing));
+
+    assertThatThrownBy(
+            () ->
+                service.createGrade(
+                    courseId, new GradeCreateRequest(studentId, examId, 14.0, null), jwt))
+        .isInstanceOf(ConflictException.class)
+        .hasMessageContaining("already exists");
+
+    verify(gradeRepository, never()).save(any());
+  }
+
+  @Test
+  void create_grade_with_unknown_exam_throws_not_found() {
+    Jwt jwt = mock(Jwt.class);
+    UUID courseId = UUID.randomUUID();
+    UUID examId = UUID.randomUUID();
+    UUID studentId = UUID.randomUUID();
+    when(userRepository.existsById(studentId)).thenReturn(true);
+    when(examRepository.findById(examId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                service.createGrade(
+                    courseId, new GradeCreateRequest(studentId, examId, 14.0, null), jwt))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("Exam not found");
+  }
+
+  @Test
+  void create_grade_with_unknown_student_throws_not_found() {
+    Jwt jwt = mock(Jwt.class);
+    UUID courseId = UUID.randomUUID();
+    UUID examId = UUID.randomUUID();
+    UUID studentId = UUID.randomUUID();
+    when(userRepository.existsById(studentId)).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                service.createGrade(
+                    courseId, new GradeCreateRequest(studentId, examId, 14.0, null), jwt))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("Student not found");
   }
 
   @Test

@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.config.GradeAccessGuard;
 import com.example.demo.config.TokenProvider;
+import com.example.demo.dto.grade.GradeCreateRequest;
 import com.example.demo.dto.grade.GradeHistoryResponse;
 import com.example.demo.dto.grade.GradeResponse;
 import com.example.demo.dto.grade.GradeUpdateRequest;
@@ -9,11 +10,13 @@ import com.example.demo.entity.JCourse;
 import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
 import com.example.demo.entity.JGradeModification;
+import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeModificationRepository;
 import com.example.demo.repository.JGradeRepository;
+import com.example.demo.repository.JUserRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,7 @@ public class GradeServiceImpl implements GradeService {
   private final JExamRepository examRepository;
   private final JCourseRepository courseRepository;
   private final JGradeModificationRepository gradeModificationRepository;
+  private final JUserRepository userRepository;
 
   public GradeServiceImpl(
       GradeAccessGuard accessGuard,
@@ -39,13 +43,51 @@ public class GradeServiceImpl implements GradeService {
       JGradeRepository gradeRepository,
       JExamRepository examRepository,
       JCourseRepository courseRepository,
-      JGradeModificationRepository gradeModificationRepository) {
+      JGradeModificationRepository gradeModificationRepository,
+      JUserRepository userRepository) {
     this.accessGuard = accessGuard;
     this.tokenProvider = tokenProvider;
     this.gradeRepository = gradeRepository;
     this.examRepository = examRepository;
     this.courseRepository = courseRepository;
     this.gradeModificationRepository = gradeModificationRepository;
+    this.userRepository = userRepository;
+  }
+
+  @Override
+  @Transactional
+  public GradeResponse createGrade(UUID courseId, GradeCreateRequest request, Jwt jwt) {
+    accessGuard.checkAdminOrTeacherOfCourse(courseId, jwt);
+    requireStudent(request.studentId());
+    JExam exam = requireExam(request.examId());
+    if (!courseId.equals(exam.getCourseId())) {
+      throw new IllegalArgumentException(
+          "Exam " + exam.getId() + " does not belong to course " + courseId);
+    }
+    if (gradeRepository
+        .findByStudentIdAndExamId(request.studentId(), request.examId())
+        .isPresent()) {
+      throw new ConflictException(
+          "A grade already exists for student "
+              + request.studentId()
+              + " on exam "
+              + request.examId());
+    }
+    UUID userId = UUID.fromString(tokenProvider.getUserId(jwt));
+    Instant now = Instant.now();
+
+    JGrade grade = new JGrade();
+    grade.setId(UUID.randomUUID());
+    grade.setStudentId(request.studentId());
+    grade.setExamId(request.examId());
+    grade.setValue(request.value());
+    grade.setComment(request.comment());
+    grade.setModifiedAt(now);
+    grade.setModifiedBy(userId);
+    gradeRepository.save(grade);
+
+    String courseTitle = courseTitle(courseId);
+    return toResponse(grade, courseTitle, exam.getId(), exam.getRef());
   }
 
   @Override
@@ -147,6 +189,12 @@ public class GradeServiceImpl implements GradeService {
         grade.getComment(),
         grade.getModifiedAt(),
         grade.getModifiedBy());
+  }
+
+  private void requireStudent(UUID studentId) {
+    if (!userRepository.existsById(studentId)) {
+      throw new ResourceNotFoundException("Student not found with id: " + studentId);
+    }
   }
 
   private String courseTitle(UUID courseId) {

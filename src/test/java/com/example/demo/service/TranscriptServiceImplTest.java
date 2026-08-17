@@ -19,9 +19,12 @@ import com.example.demo.enums.Role;
 import com.example.demo.enums.TranscriptStatus;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.mapper.TranscriptMapper;
+import com.example.demo.pdf.TranscriptPdfGenerator;
 import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JTranscriptRepository;
 import com.example.demo.repository.JUserRepository;
+import java.io.File;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -30,6 +33,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 class TranscriptServiceImplTest {
@@ -39,6 +43,7 @@ class TranscriptServiceImplTest {
   private JPromotionRepository promotionRepository;
   private JTranscriptRepository transcriptRepository;
   private TranscriptDataBuilder transcriptDataBuilder;
+  private TranscriptPdfGenerator pdfGenerator;
   private EventProducer<TranscriptEmailRequested> eventProducer;
   private TranscriptServiceImpl service;
 
@@ -50,6 +55,7 @@ class TranscriptServiceImplTest {
     promotionRepository = mock(JPromotionRepository.class);
     transcriptRepository = mock(JTranscriptRepository.class);
     transcriptDataBuilder = mock(TranscriptDataBuilder.class);
+    pdfGenerator = mock(TranscriptPdfGenerator.class);
     eventProducer = mock(EventProducer.class);
     service =
         new TranscriptServiceImpl(
@@ -59,6 +65,7 @@ class TranscriptServiceImplTest {
             transcriptRepository,
             new TranscriptMapper(),
             transcriptDataBuilder,
+            pdfGenerator,
             eventProducer);
   }
 
@@ -183,6 +190,86 @@ class TranscriptServiceImplTest {
     assertThat(response.pdfUrl()).isEqualTo("https://s3.example/transcript.pdf");
     assertThat(response.email()).isEqualTo("student@school.com");
     assertThat(response.generatedAt()).isEqualTo(Instant.parse("2024-01-01T10:00:00Z"));
+  }
+
+  @Test
+  void get_transcript_returns_status_and_s3_link() {
+    JUser student = student();
+    Jwt jwt = jwt(Role.ADMIN);
+    JTranscript persisted = new JTranscript();
+    persisted.setId(UUID.randomUUID());
+    persisted.setStudentId(student.getId());
+    persisted.setPromotionId(null);
+    persisted.markPending("student@school.com");
+    persisted.markGenerated(
+        "https://s3.example/transcript.pdf", Instant.parse("2024-01-01T10:00:00Z"));
+    when(transcriptRepository.findById(persisted.getId())).thenReturn(Optional.of(persisted));
+    when(transcriptDataBuilder.buildItems(student.getId(), null))
+        .thenReturn(List.of(item("Maths", "2023-01-01T09:00:00Z", 1.0, 14.0, 6)));
+
+    TranscriptResponse response = service.getTranscript(persisted.getId(), jwt);
+
+    assertThat(response.id()).isEqualTo(persisted.getId());
+    assertThat(response.studentId()).isEqualTo(student.getId());
+    assertThat(response.status()).isEqualTo(TranscriptStatus.GENERATED);
+    assertThat(response.pdfUrl()).isEqualTo("https://s3.example/transcript.pdf");
+    assertThat(response.email()).isEqualTo("student@school.com");
+    assertThat(response.items()).hasSize(1);
+    verify(accessGuard).checkStudentAccess(student.getId(), jwt);
+  }
+
+  @Test
+  void get_unknown_transcript_throws_not_found() {
+    Jwt jwt = jwt(Role.ADMIN);
+    when(transcriptRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.getTranscript(UUID.randomUUID(), jwt))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("Transcript not found");
+  }
+
+  @Test
+  void get_transcript_of_another_student_is_denied() {
+    JUser student = student();
+    Jwt jwt = jwt(Role.STUDENT);
+    JTranscript persisted = new JTranscript();
+    persisted.setId(UUID.randomUUID());
+    persisted.setStudentId(student.getId());
+    persisted.markPending("student@school.com");
+    when(transcriptRepository.findById(persisted.getId())).thenReturn(Optional.of(persisted));
+    org.mockito.Mockito.doThrow(
+            new AccessDeniedException("A student can only access their own transcript"))
+        .when(accessGuard)
+        .checkStudentAccess(student.getId(), jwt);
+
+    assertThatThrownBy(() -> service.getTranscript(persisted.getId(), jwt))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
+  void download_transcript_pdf_returns_pdf_bytes() throws Exception {
+    JUser student = student();
+    Jwt jwt = jwt(Role.ADMIN);
+    when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
+    when(transcriptDataBuilder.buildItems(student.getId(), null)).thenReturn(List.of());
+    File pdf = File.createTempFile("transcript-test", ".pdf");
+    Files.write(pdf.toPath(), "%PDF-1.4 fake content".getBytes());
+    when(pdfGenerator.generate(any(UUID.class), any(JUser.class), any())).thenReturn(pdf);
+
+    byte[] bytes = service.downloadTranscriptPdf(student.getId(), jwt);
+
+    assertThat(new String(bytes)).isEqualTo("%PDF-1.4 fake content");
+    assertThat(pdf.exists()).isFalse();
+    verify(accessGuard).checkStudentAccess(student.getId(), jwt);
+  }
+
+  @Test
+  void download_transcript_pdf_of_unknown_student_throws_not_found() {
+    Jwt jwt = jwt(Role.ADMIN);
+    when(userRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.downloadTranscriptPdf(UUID.randomUUID(), jwt))
+        .isInstanceOf(ResourceNotFoundException.class);
   }
 
   @Test

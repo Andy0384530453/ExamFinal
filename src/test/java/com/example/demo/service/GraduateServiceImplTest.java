@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.demo.dto.graduate.GraduateResponse;
+import com.example.demo.dto.graduate.GraduatesResponse;
 import com.example.demo.entity.JGroup;
 import com.example.demo.entity.JPromotion;
 import com.example.demo.entity.JStudentGroup;
@@ -127,6 +128,56 @@ class GraduateServiceImplTest {
     List<GraduateResponse> graduates = service.getGraduates(promotionId);
 
     assertThat(graduates).isEmpty();
+  }
+
+  @Test
+  void graduates_response_wraps_promotion_information() {
+    UUID promotionId = UUID.randomUUID();
+    JPromotion promotion = promotion();
+    promotion.setId(promotionId);
+    when(promotionRepository.findById(promotionId)).thenReturn(Optional.of(promotion));
+    when(promotionRepository.existsById(promotionId)).thenReturn(true);
+    when(groupRepository.findByPromotionId(promotionId)).thenReturn(List.of());
+
+    GraduatesResponse response = service.getGraduatesResponse(promotionId);
+
+    assertThat(response.promotionId()).isEqualTo(promotionId);
+    assertThat(response.promotionRef()).isEqualTo(promotion.getRef());
+    assertThat(response.promotionYear()).isEqualTo(promotion.getYear());
+    assertThat(response.graduates()).isEmpty();
+  }
+
+  @Test
+  void graduates_response_contains_computed_graduates() {
+    UUID promotionId = UUID.randomUUID();
+    JPromotion promotion = promotion();
+    promotion.setId(promotionId);
+    JGroup group = group(promotionId);
+    JUser student = student();
+    when(promotionRepository.findById(promotionId)).thenReturn(Optional.of(promotion));
+    when(promotionRepository.existsById(promotionId)).thenReturn(true);
+    when(groupRepository.findByPromotionId(promotionId)).thenReturn(List.of(group));
+    when(studentGroupRepository.findByGroupIdIn(List.of(group.getId())))
+        .thenReturn(List.of(membership(student.getId(), group.getId(), Instant.now())));
+    when(userRepository.findAllById(List.of(student.getId()))).thenReturn(List.of(student));
+    when(graduateCalculator.passingAverage(student.getId(), promotionId))
+        .thenReturn(Optional.of(13.5));
+
+    GraduatesResponse response = service.getGraduatesResponse(promotionId);
+
+    assertThat(response.promotionRef()).isEqualTo(promotion.getRef());
+    assertThat(response.graduates()).hasSize(1);
+    assertThat(response.graduates().get(0).studentId()).isEqualTo(student.getId());
+    assertThat(response.graduates().get(0).average()).isEqualTo(13.5);
+  }
+
+  @Test
+  void graduates_response_unknown_promotion_throws_not_found() {
+    UUID promotionId = UUID.randomUUID();
+    when(promotionRepository.findById(promotionId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.getGraduatesResponse(promotionId))
+        .isInstanceOf(ResourceNotFoundException.class);
   }
 
   @Test

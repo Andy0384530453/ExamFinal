@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.FORBIDDEN, e.getMessage(), request);
   }
 
+  @ExceptionHandler(ConflictException.class)
+  public ResponseEntity<ErrorResponse> handleConflict(
+      ConflictException e, HttpServletRequest request) {
+    return build(HttpStatus.CONFLICT, e.getMessage(), request);
+  }
+
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   public ResponseEntity<ErrorResponse> handleTypeMismatch(
       MethodArgumentTypeMismatchException e, HttpServletRequest request) {

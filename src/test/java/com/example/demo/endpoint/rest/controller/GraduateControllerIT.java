@@ -102,8 +102,7 @@ class GraduateControllerIT extends FacadeIT {
     grade(student, exam, 14.5);
     JUser teacher = user(Role.TEACHER);
 
-    ResponseEntity<GraduatesResponse> response =
-        getGraduates(token(teacher), promotion.getId());
+    ResponseEntity<GraduatesResponse> response = getGraduates(token(teacher), promotion.getId());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     GraduatesResponse body = response.getBody();

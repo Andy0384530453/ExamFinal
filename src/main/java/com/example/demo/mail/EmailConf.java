@@ -1,6 +1,7 @@
 package com.example.demo.mail;
 
 import com.example.demo.PojaGenerated;
+import java.net.URI;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -13,15 +14,21 @@ import software.amazon.awssdk.services.ses.SesClient;
 public class EmailConf {
 
   @Getter private final String sesSource;
-  private final Region region;
+  private final String sesEndpoint;
 
-  public EmailConf(@Value("noreply@poja.io") String sesSource, @Value("eu-west-3") Region region) {
+  public EmailConf(
+      @Value("${aws.ses.source}") String sesSource,
+      @Value("${aws.ses.endpoint:}") String sesEndpoint) {
     this.sesSource = sesSource;
-    this.region = region;
+    this.sesEndpoint = sesEndpoint;
   }
 
   @Bean
   public SesClient getSesClient() {
-    return SesClient.builder().region(region).build();
+    var builder = SesClient.builder().region(Region.EU_WEST_3);
+    if (sesEndpoint != null && !sesEndpoint.isBlank()) {
+      builder.endpointOverride(URI.create(sesEndpoint));
+    }
+    return builder.build();
   }
 }

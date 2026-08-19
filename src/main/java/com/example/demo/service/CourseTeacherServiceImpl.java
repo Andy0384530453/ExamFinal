@@ -56,7 +56,14 @@ public class CourseTeacherServiceImpl implements CourseTeacherService {
   @Transactional
   public void remove(UUID courseId, UUID teacherId) {
     requireCourse(courseId);
-    courseTeacherRepository.deleteByCourseIdAndTeacherId(courseId, teacherId);
+    JCourseTeacher assignment =
+        courseTeacherRepository
+            .findByCourseIdAndTeacherId(courseId, teacherId)
+            .orElseThrow(
+                () ->
+                    new ResourceNotFoundException(
+                        "Teacher " + teacherId + " is not assigned to course " + courseId));
+    courseTeacherRepository.delete(assignment);
   }
 
   private CourseTeacherResponse toResponse(JCourseTeacher assignment) {
@@ -72,7 +79,7 @@ public class CourseTeacherServiceImpl implements CourseTeacherService {
 
   private void requireUser(UUID userId) {
     if (!userRepository.existsById(userId)) {
-      throw new ResourceNotFoundException("User not found with id: " + userId);
+      throw new ResourceNotFoundException("Teacher not found with id: " + userId);
     }
   }
 }

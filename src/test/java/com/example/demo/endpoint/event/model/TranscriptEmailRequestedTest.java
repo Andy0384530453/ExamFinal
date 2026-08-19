@@ -27,5 +27,6 @@ class TranscriptEmailRequestedTest {
 
     assertThat(decoded.getTranscriptId()).isEqualTo(event.getTranscriptId());
     assertThat(decoded.maxConsumerDuration().toSeconds()).isEqualTo(120);
+    assertThat(decoded.maxConsumerBackoffBetweenRetries().toSeconds()).isEqualTo(30);
   }
 }

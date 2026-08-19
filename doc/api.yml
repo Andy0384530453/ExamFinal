@@ -31,278 +31,21 @@ servers:
     description: Pre-production
 
 tags:
-  - name: Users
-    description: User management (students, teachers, admins)
-  - name: Groups
-    description: Group management and student membership
   - name: Courses
-    description: Course management, teachers and associated groups
-  - name: Exams
-    description: Exam management
+    description: Course teachers, groups and grades
   - name: Grades
     description: Grade management and their history
   - name: Transcripts
     description: Grade transcripts (PDF, email, S3)
   - name: Promotions
-    description: Promotions, results and list of graduates
-  - name: Ui
-    description: Thymeleaf GUI
+    description: Promotions, results, graduates and Thymeleaf GUI
+  - name: StudentGroups
+    description: Student group assignments and history
 
 paths:
-  /users:
-    get:
-      tags: [Users]
-      operationId: getUsers
-      summary: List all users
-      description: |
-        Authorized roles: ADMIN.
-        Allows filtering by role and searching by email.
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - name: role
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/Role'
-          description: Filter by role
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 1
-        - name: pageSize
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 30
-      responses:
-        '200':
-          description: List of users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    post:
-      tags: [Users]
-      operationId: createUser
-      summary: Create a user
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreateRequest'
-      responses:
-        '201':
-          description: User created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /users/{id}:
-    get:
-      tags: [Users]
-      operationId: getUser
-      summary: Get a user
-      description: |
-        Authorized roles: ADMIN. A student can only see themselves.
-      security:
-        - bearerAuth: [ADMIN, STUDENT]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: User found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      tags: [Users]
-      operationId: updateUser
-      summary: Update a user
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserUpdateRequest'
-      responses:
-        '200':
-          description: User updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      tags: [Users]
-      operationId: deleteUser
-      summary: Delete a user
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '204':
-          description: User deleted
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /groups:
-    get:
-      tags: [Groups]
-      operationId: getGroups
-      summary: List all groups
-      description: "Authorized roles: ADMIN, TEACHER."
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - name: promotionId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-          description: Filters the groups of a given promotion
-      responses:
-        '200':
-          description: List of groups
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Group'
-    post:
-      tags: [Groups]
-      operationId: createGroup
-      summary: Create a group
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupCreateRequest'
-      responses:
-        '201':
-          description: Group created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Group'
-
-  /groups/{id}:
-    get:
-      tags: [Groups]
-      operationId: getGroup
-      summary: Get a group
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Group found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Group'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      tags: [Groups]
-      operationId: updateGroup
-      summary: Update a group
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupCreateRequest'
-      responses:
-        '200':
-          description: Group updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Group'
-    delete:
-      tags: [Groups]
-      operationId: deleteGroup
-      summary: Delete a group
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '204':
-          description: Group deleted
-
-  /groups/{id}/students:
-    get:
-      tags: [Groups]
-      operationId: getGroupStudents
-      summary: Students currently in a group
-      description: |
-        Authorized roles: ADMIN, TEACHER, and the student member of the group.
-        Only returns active members (endDate null).
-      security:
-        - bearerAuth: [ADMIN, TEACHER, STUDENT]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Students of the group
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
-
   /students/{id}/groups:
     get:
-      tags: [Groups]
+      tags: [StudentGroups]
       operationId: getStudentGroupsHistory
       summary: Group history of a student
       description: |
@@ -323,7 +66,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/StudentGroup'
     post:
-      tags: [Groups]
+      tags: [StudentGroups]
       operationId: changeStudentGroup
       summary: Change the group of a student
       description: |
@@ -350,118 +93,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /courses:
-    get:
-      tags: [Courses]
-      operationId: getCourses
-      summary: List all courses
-      description: |
-        Authorized roles: ADMIN, TEACHER, STUDENT.
-        A teacher only sees their own courses; a student only sees the courses
-        given to their groups.
-      security:
-        - bearerAuth: [ADMIN, TEACHER, STUDENT]
-      parameters:
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 1
-        - name: pageSize
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            default: 30
-      responses:
-        '200':
-          description: List of courses
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Course'
-    post:
-      tags: [Courses]
-      operationId: createCourse
-      summary: Create a course
-      description: "Authorized roles: TEACHER, ADMIN."
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CourseCreateRequest'
-      responses:
-        '201':
-          description: Course created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Course'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /courses/{id}:
-    get:
-      tags: [Courses]
-      operationId: getCourse
-      summary: Get a course
-      security:
-        - bearerAuth: [ADMIN, TEACHER, STUDENT]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Course found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Course'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      tags: [Courses]
-      operationId: updateCourse
-      summary: Update a course
-      description: "Authorized roles: TEACHER (of this course), ADMIN."
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CourseCreateRequest'
-      responses:
-        '200':
-          description: Course updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Course'
-    delete:
-      tags: [Courses]
-      operationId: deleteCourse
-      summary: Delete a course
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '204':
-          description: Course deleted
-
-  /courses/{id}/teachers:
+  /courses/{courseId}/teachers:
     get:
       tags: [Courses]
       operationId: getCourseTeachers
@@ -472,7 +104,12 @@ paths:
       security:
         - bearerAuth: [ADMIN, TEACHER]
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Teachers of the course
@@ -481,7 +118,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/User'
+                  $ref: '#/components/schemas/CourseTeacherResponse'
     post:
       tags: [Courses]
       operationId: assignTeacherToCourse
@@ -490,24 +127,29 @@ paths:
       security:
         - bearerAuth: [ADMIN]
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TeacherAssignmentRequest'
+              $ref: '#/components/schemas/CourseTeacherAssignRequest'
       responses:
         '201':
           description: Teacher assigned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CourseTeacher'
+                $ref: '#/components/schemas/CourseTeacherResponse'
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /courses/{id}/teachers/{teacherId}:
+  /courses/{courseId}/teachers/{teacherId}:
     delete:
       tags: [Courses]
       operationId: removeTeacherFromCourse
@@ -516,7 +158,12 @@ paths:
       security:
         - bearerAuth: [ADMIN]
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
         - name: teacherId
           in: path
           required: true
@@ -529,7 +176,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /courses/{id}/groups:
+  /courses/{courseId}/groups:
     get:
       tags: [Courses]
       operationId: getCourseGroups
@@ -540,7 +187,12 @@ paths:
       security:
         - bearerAuth: [ADMIN, TEACHER]
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Groups following the course
@@ -549,7 +201,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Group'
+                  $ref: '#/components/schemas/CourseGroupResponse'
     post:
       tags: [Courses]
       operationId: assignGroupToCourse
@@ -558,7 +210,12 @@ paths:
       security:
         - bearerAuth: [ADMIN, TEACHER]
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -571,11 +228,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CourseGroup'
+                $ref: '#/components/schemas/CourseGroupResponse'
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /courses/{id}/groups/{groupId}:
+  /courses/{courseId}/groups/{groupId}:
     delete:
       tags: [Courses]
       operationId: removeGroupFromCourse
@@ -584,7 +241,12 @@ paths:
       security:
         - bearerAuth: [ADMIN, TEACHER]
       parameters:
-        - $ref: '#/components/parameters/IdPath'
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
         - name: groupId
           in: path
           required: true
@@ -596,109 +258,6 @@ paths:
           description: Group removed from the course
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /exams:
-    get:
-      tags: [Exams]
-      operationId: getExams
-      summary: List all exams
-      description: |
-        Authorized roles: ADMIN, TEACHER.
-        Filterable by course.
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - name: courseId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-          description: Filters the exams of a course
-      responses:
-        '200':
-          description: List of exams
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Exam'
-    post:
-      tags: [Exams]
-      operationId: createExam
-      summary: Create an exam
-      description: "Authorized roles: TEACHER (of the course), ADMIN."
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ExamCreateRequest'
-      responses:
-        '201':
-          description: Exam created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Exam'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
-  /exams/{id}:
-    get:
-      tags: [Exams]
-      operationId: getExam
-      summary: Get an exam
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Exam found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Exam'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      tags: [Exams]
-      operationId: updateExam
-      summary: Update an exam
-      description: "Authorized roles: TEACHER (of the course), ADMIN."
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ExamCreateRequest'
-      responses:
-        '200':
-          description: Exam updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Exam'
-    delete:
-      tags: [Exams]
-      operationId: deleteExam
-      summary: Delete an exam
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '204':
-          description: Exam deleted
 
   /students/{id}/grades:
     get:
@@ -723,6 +282,128 @@ paths:
                   $ref: '#/components/schemas/Grade'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /courses/{courseId}/grades:
+    get:
+      tags: [Grades]
+      operationId: getCourseGrades
+      summary: Grades of a course
+      description: |
+        Authorized roles: TEACHER (of this course), ADMIN.
+        A teacher can see all the grades of their courses.
+      security:
+        - bearerAuth: [ADMIN, TEACHER]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Course grades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Grade'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Grades]
+      operationId: createGrade
+      summary: Enter a grade for a student
+      description: |
+        Authorized roles: TEACHER (of the course of the exam), ADMIN.
+        The initial grade is created without history.
+      security:
+        - bearerAuth: [ADMIN, TEACHER]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GradeCreateRequest'
+      responses:
+        '201':
+          description: Grade created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grade'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /grades/{id}:
+    put:
+      tags: [Grades]
+      operationId: updateGrade
+      summary: Modify a grade
+      description: |
+        Authorized roles: TEACHER (of the course of the exam), ADMIN.
+        A grade can change over time (claims, errors): the `reason` field is
+        MANDATORY and explains why the grade is modified.
+        Each modification is recorded in the history (GradeModification).
+      security:
+        - bearerAuth: [ADMIN, TEACHER]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GradeUpdateRequest'
+      responses:
+        '200':
+          description: Grade modified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grade'
+        '400':
+          description: The reason is mandatory for any modification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /grades/{id}/history:
+    get:
+      tags: [Grades]
+      operationId: getGradeHistory
+      summary: Modification history of a grade
+      description: |
+        Authorized roles: ADMIN, TEACHER (of the course of the exam).
+        Complete history: old value, new value, reason, author, date.
+      security:
+        - bearerAuth: [ADMIN, TEACHER]
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Grade history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GradeModification'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /students/{id}/transcript:
     get:
@@ -824,181 +505,23 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /courses/{id}/grades:
-    get:
-      tags: [Grades]
-      operationId: getCourseGrades
-      summary: Grades of a course
-      description: |
-        Authorized roles: TEACHER (of this course), ADMIN.
-        A teacher can see all the grades of their courses.
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-        - name: examId
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uuid
-          description: Filters the grades of a specific exam
-      responses:
-        '200':
-          description: Course grades
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Grade'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    post:
-      tags: [Grades]
-      operationId: createGrade
-      summary: Enter a grade for a student
-      description: |
-        Authorized roles: TEACHER (of the course of the exam), ADMIN.
-        The initial grade is created without history.
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GradeCreateRequest'
-      responses:
-        '201':
-          description: Grade created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Grade'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  /grades/{id}:
-    put:
-      tags: [Grades]
-      operationId: updateGrade
-      summary: Modify a grade
-      description: |
-        Authorized roles: TEACHER (of the course of the exam), ADMIN.
-        A grade can change over time (claims, errors): the `reason` field is
-        MANDATORY and explains why the grade is modified.
-        Each modification is recorded in the history (GradeModification).
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GradeUpdateRequest'
-      responses:
-        '200':
-          description: Grade modified
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Grade'
-        '400':
-          description: The reason is mandatory for any modification
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /grades/{id}/history:
-    get:
-      tags: [Grades]
-      operationId: getGradeHistory
-      summary: Modification history of a grade
-      description: |
-        Authorized roles: ADMIN, TEACHER (of the course of the exam).
-        Complete history: old value, new value, reason, author, date.
-      security:
-        - bearerAuth: [ADMIN, TEACHER]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Grade history
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GradeModification'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
   /promotions:
     get:
       tags: [Promotions]
       operationId: getPromotions
-      summary: List all promotions
-      description: "Authorized roles: ADMIN, TEACHER, STUDENT."
-      security:
-        - bearerAuth: [ADMIN, TEACHER, STUDENT]
+      summary: List all promotions (Thymeleaf HTML page)
+      description: |
+        Returns a Thymeleaf HTML page listing all promotions with a download
+        button for each promotion's graduates.
+        Not a REST endpoint returning JSON.
       responses:
         '200':
-          description: List of promotions
+          description: HTML page
           content:
-            application/json:
+            text/html:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Promotion'
-    post:
-      tags: [Promotions]
-      operationId: createPromotion
-      summary: Create a promotion
-      description: "Authorized roles: ADMIN."
-      security:
-        - bearerAuth: [ADMIN]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PromotionCreateRequest'
-      responses:
-        '201':
-          description: Promotion created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Promotion'
-
-  /promotions/{id}:
-    get:
-      tags: [Promotions]
-      operationId: getPromotion
-      summary: Get a promotion
-      security:
-        - bearerAuth: [ADMIN, TEACHER, STUDENT]
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Promotion found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Promotion'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                type: string
+      security: []
 
   /promotions/{id}/results:
     get:
@@ -1069,44 +592,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /ui/promotions:
-    get:
-      tags: [Ui]
-      operationId: showPromotionsUi
-      summary: Thymeleaf page listing all promotions
-      description: |
-        Thymeleaf GUI (simple page, without fancy CSS).
-        Lists all promotions with, for each one, a button to download the list
-        of graduates of the promotion.
-      responses:
-        '200':
-          description: HTML page
-          content:
-            text/html:
-              schema:
-                type: string
-      security: []
-
-  /ui/promotions/{id}/graduates:
-    get:
-      tags: [Ui]
-      operationId: downloadGraduatesExcelUi
-      summary: Download button for the list of graduates (Thymeleaf)
-      description: |
-        Link used by the button of the Thymeleaf page. Redirects to the
-        download of the Excel file of the graduates of the promotion.
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-      responses:
-        '200':
-          description: Excel file of the list of graduates
-          content:
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
-      security: []
-
 components:
   securitySchemes:
     bearerAuth:
@@ -1128,137 +613,6 @@ components:
         format: uuid
 
   schemas:
-    Role:
-      type: string
-      enum:
-        - STUDENT
-        - TEACHER
-        - ADMIN
-
-    User:
-      type: object
-      required:
-        - id
-        - ref
-        - role
-      properties:
-        id:
-          type: string
-          format: uuid
-        ref:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-          format: email
-        role:
-          $ref: '#/components/schemas/Role'
-
-    UserCreateRequest:
-      type: object
-      required:
-        - ref
-        - email
-        - role
-      properties:
-        ref:
-          type: string
-          description: Unique user reference
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-          format: email
-        role:
-          $ref: '#/components/schemas/Role'
-
-    UserUpdateRequest:
-      type: object
-      properties:
-        firstName:
-          type: string
-        lastName:
-          type: string
-        email:
-          type: string
-          format: email
-        role:
-          $ref: '#/components/schemas/Role'
-
-    Course:
-      type: object
-      required:
-        - id
-        - ref
-        - title
-        - credits
-      properties:
-        id:
-          type: string
-          format: uuid
-        ref:
-          type: string
-        title:
-          type: string
-        credits:
-          type: integer
-          format: int32
-          description: Number of course credits
-        promotionId:
-          type: string
-          format: uuid
-          description: Promotion (year) the course belongs to
-
-    CourseCreateRequest:
-      type: object
-      required:
-        - ref
-        - title
-        - credits
-      properties:
-        ref:
-          type: string
-        title:
-          type: string
-        credits:
-          type: integer
-          format: int32
-        promotionId:
-          type: string
-          format: uuid
-
-    Group:
-      type: object
-      required:
-        - id
-        - ref
-      properties:
-        id:
-          type: string
-          format: uuid
-        ref:
-          type: string
-        promotionId:
-          type: string
-          format: uuid
-          description: Promotion the group belongs to
-
-    GroupCreateRequest:
-      type: object
-      required:
-        - ref
-      properties:
-        ref:
-          type: string
-        promotionId:
-          type: string
-          format: uuid
-
     StudentGroup:
       type: object
       required:
@@ -1277,11 +631,11 @@ components:
           format: uuid
         startDate:
           type: string
-          format: date
+          format: date-time
           description: Start of the group assignment
         endDate:
           type: string
-          format: date
+          format: date-time
           nullable: true
           description: End of the assignment (null if current assignment)
 
@@ -1298,7 +652,7 @@ components:
           format: date
           description: "Start date of the new assignment (default: today)"
 
-    CourseTeacher:
+    CourseTeacherResponse:
       type: object
       required:
         - id
@@ -1315,7 +669,7 @@ components:
           type: string
           format: uuid
 
-    TeacherAssignmentRequest:
+    CourseTeacherAssignRequest:
       type: object
       required:
         - teacherId
@@ -1324,7 +678,7 @@ components:
           type: string
           format: uuid
 
-    CourseGroup:
+    CourseGroupResponse:
       type: object
       required:
         - id
@@ -1350,50 +704,6 @@ components:
           type: string
           format: uuid
 
-    Exam:
-      type: object
-      required:
-        - id
-        - courseId
-        - dateExam
-        - coefficient
-      properties:
-        id:
-          type: string
-          format: uuid
-        courseId:
-          type: string
-          format: uuid
-        ref:
-          type: string
-        dateExam:
-          type: string
-          format: date-time
-          description: Exam date and time
-        coefficient:
-          type: number
-          format: double
-          description: Exam coefficient
-
-    ExamCreateRequest:
-      type: object
-      required:
-        - courseId
-        - dateExam
-        - coefficient
-      properties:
-        courseId:
-          type: string
-          format: uuid
-        ref:
-          type: string
-        dateExam:
-          type: string
-          format: date-time
-        coefficient:
-          type: number
-          format: double
-
     Grade:
       type: object
       required:
@@ -1411,6 +721,12 @@ components:
         examId:
           type: string
           format: uuid
+        examRef:
+          type: string
+          description: Reference of the exam
+        courseTitle:
+          type: string
+          description: Title of the course
         value:
           type: number
           format: double
@@ -1455,9 +771,9 @@ components:
         value:
           type: number
           format: double
+          minimum: 0.0
+          maximum: 20.0
           description: New grade value
-        comment:
-          type: string
         reason:
           type: string
           description: |
@@ -1466,18 +782,10 @@ components:
     GradeModification:
       type: object
       required:
-        - id
-        - gradeId
         - oldValue
         - newValue
         - reason
       properties:
-        id:
-          type: string
-          format: uuid
-        gradeId:
-          type: string
-          format: uuid
         oldValue:
           type: number
           format: double
@@ -1494,34 +802,47 @@ components:
           type: string
           format: uuid
 
-    Promotion:
+    PromotionResults:
       type: object
       required:
-        - id
-        - ref
-        - year
+        - promotionId
+        - promotionYear
       properties:
-        id:
+        promotionId:
           type: string
           format: uuid
-        ref:
-          type: string
-        year:
+        promotionYear:
           type: integer
           format: int32
-          description: Promotion year (e.g. 2026)
+        year1:
+          $ref: '#/components/schemas/YearResults'
+        year2:
+          $ref: '#/components/schemas/YearResults'
+        year3:
+          $ref: '#/components/schemas/YearResults'
+        overallAverage:
+          type: number
+          format: double
+        graduationRate:
+          type: number
+          format: double
+          description: Graduation rate (%)
 
-    PromotionCreateRequest:
+    YearResults:
       type: object
-      required:
-        - ref
-        - year
       properties:
-        ref:
-          type: string
         year:
           type: integer
           format: int32
+        average:
+          type: number
+          format: double
+        bestStudentId:
+          type: string
+          format: uuid
+        failureRate:
+          type: number
+          format: double
 
     Transcript:
       type: object
@@ -1627,11 +948,6 @@ components:
           type: number
           format: double
           description: Overall average of the student
-        creditsAcquired:
-          type: integer
-          format: int32
-        graduated:
-          type: boolean
 
     GraduatesResponse:
       type: object
@@ -1651,48 +967,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Graduate'
-
-    PromotionResults:
-      type: object
-      required:
-        - promotionId
-        - promotionYear
-      properties:
-        promotionId:
-          type: string
-          format: uuid
-        promotionYear:
-          type: integer
-          format: int32
-        year1:
-          $ref: '#/components/schemas/YearResults'
-        year2:
-          $ref: '#/components/schemas/YearResults'
-        year3:
-          $ref: '#/components/schemas/YearResults'
-        overallAverage:
-          type: number
-          format: double
-        graduationRate:
-          type: number
-          format: double
-          description: Graduation rate (%)
-
-    YearResults:
-      type: object
-      properties:
-        year:
-          type: integer
-          format: int32
-        average:
-          type: number
-          format: double
-        bestStudentId:
-          type: string
-          format: uuid
-        failureRate:
-          type: number
-          format: double
 
     ErrorResponse:
       type: object

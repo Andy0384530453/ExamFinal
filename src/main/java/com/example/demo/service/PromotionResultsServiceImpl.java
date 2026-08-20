@@ -8,13 +8,13 @@ import com.example.demo.entity.JGrade;
 import com.example.demo.entity.JGroup;
 import com.example.demo.entity.JPromotion;
 import com.example.demo.entity.JStudentGroup;
-import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeRepository;
 import com.example.demo.repository.JGroupRepository;
 import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JStudentGroupRepository;
+import com.example.demo.validator.EntityValidator;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +37,7 @@ public class PromotionResultsServiceImpl implements PromotionResultsService {
   private final JExamRepository examRepository;
   private final JGradeRepository gradeRepository;
   private final GraduateCalculator graduateCalculator;
+  private final EntityValidator validator;
 
   public PromotionResultsServiceImpl(
       JPromotionRepository promotionRepository,
@@ -45,7 +46,8 @@ public class PromotionResultsServiceImpl implements PromotionResultsService {
       JCourseRepository courseRepository,
       JExamRepository examRepository,
       JGradeRepository gradeRepository,
-      GraduateCalculator graduateCalculator) {
+      GraduateCalculator graduateCalculator,
+      EntityValidator validator) {
     this.promotionRepository = promotionRepository;
     this.groupRepository = groupRepository;
     this.studentGroupRepository = studentGroupRepository;
@@ -53,15 +55,12 @@ public class PromotionResultsServiceImpl implements PromotionResultsService {
     this.examRepository = examRepository;
     this.gradeRepository = gradeRepository;
     this.graduateCalculator = graduateCalculator;
+    this.validator = validator;
   }
 
   @Override
   public PromotionResultsResponse getPromotionResults(UUID promotionId) {
-    JPromotion promotion =
-        promotionRepository
-            .findById(promotionId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Promotion not found with id: " + promotionId));
+    JPromotion promotion = validator.requirePromotion(promotionId);
     List<UUID> cohortStudentIds = findCohortStudentIds(promotionId);
     int baseYear = promotion.getYear();
     YearResultsResponse year1 = yearResults(baseYear, cohortStudentIds);

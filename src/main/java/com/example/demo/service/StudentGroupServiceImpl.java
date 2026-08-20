@@ -5,10 +5,8 @@ import com.example.demo.dto.group.StudentGroupChangeRequest;
 import com.example.demo.dto.group.StudentGroupResponse;
 import com.example.demo.entity.JStudentGroup;
 import com.example.demo.enums.Role;
-import com.example.demo.exception.ResourceNotFoundException;
-import com.example.demo.repository.JGroupRepository;
 import com.example.demo.repository.JStudentGroupRepository;
-import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -24,25 +22,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class StudentGroupServiceImpl implements StudentGroupService {
 
   private final TokenProvider tokenProvider;
-  private final JUserRepository userRepository;
-  private final JGroupRepository groupRepository;
   private final JStudentGroupRepository studentGroupRepository;
+  private final EntityValidator validator;
 
   public StudentGroupServiceImpl(
       TokenProvider tokenProvider,
-      JUserRepository userRepository,
-      JGroupRepository groupRepository,
-      JStudentGroupRepository studentGroupRepository) {
+      JStudentGroupRepository studentGroupRepository,
+      EntityValidator validator) {
     this.tokenProvider = tokenProvider;
-    this.userRepository = userRepository;
-    this.groupRepository = groupRepository;
     this.studentGroupRepository = studentGroupRepository;
+    this.validator = validator;
   }
 
   @Override
   public List<StudentGroupResponse> getStudentGroupHistory(UUID studentId, Jwt jwt) {
     checkAdminOrStudentSelf(studentId, jwt);
-    requireStudent(studentId);
+    validator.assertStudentExists(studentId);
     return studentGroupRepository.findByStudentIdOrderByStartDateDesc(studentId).stream()
         .map(this::toResponse)
         .toList();
@@ -52,8 +47,8 @@ public class StudentGroupServiceImpl implements StudentGroupService {
   @Transactional
   public StudentGroupResponse changeStudentGroup(
       UUID studentId, StudentGroupChangeRequest request) {
-    requireStudent(studentId);
-    requireGroup(request.groupId());
+    validator.assertStudentExists(studentId);
+    validator.requireGroup(request.groupId());
     Instant startDate =
         request.startDate() == null
             ? today()
@@ -90,18 +85,6 @@ public class StudentGroupServiceImpl implements StudentGroupService {
       return;
     }
     throw new AccessDeniedException("Access denied: insufficient role");
-  }
-
-  private void requireStudent(UUID studentId) {
-    if (!userRepository.existsById(studentId)) {
-      throw new ResourceNotFoundException("Student not found with id: " + studentId);
-    }
-  }
-
-  private void requireGroup(UUID groupId) {
-    if (!groupRepository.existsById(groupId)) {
-      throw new ResourceNotFoundException("Group not found with id: " + groupId);
-    }
   }
 
   private Instant today() {

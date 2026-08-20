@@ -14,6 +14,7 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseTeacherRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,20 +26,20 @@ import org.springframework.security.oauth2.jwt.Jwt;
 class GradeAccessGuardTest {
 
   private TokenProvider tokenProvider;
-  private JGradeRepository gradeRepository;
   private JExamRepository examRepository;
+  private JGradeRepository gradeRepository;
   private JCourseTeacherRepository courseTeacherRepository;
   private GradeAccessGuard guard;
 
   @BeforeEach
   void setUp() {
     tokenProvider = mock(TokenProvider.class);
-    gradeRepository = mock(JGradeRepository.class);
     examRepository = mock(JExamRepository.class);
+    gradeRepository = mock(JGradeRepository.class);
     courseTeacherRepository = mock(JCourseTeacherRepository.class);
-    guard =
-        new GradeAccessGuard(
-            tokenProvider, gradeRepository, examRepository, courseTeacherRepository);
+    EntityValidator validator =
+        new EntityValidator(null, null, null, null, examRepository, gradeRepository, null);
+    guard = new GradeAccessGuard(tokenProvider, courseTeacherRepository, validator);
   }
 
   @Test

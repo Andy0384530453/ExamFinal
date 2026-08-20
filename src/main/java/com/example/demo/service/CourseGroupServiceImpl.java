@@ -5,10 +5,8 @@ import com.example.demo.dto.coursegroup.CourseGroupAssignRequest;
 import com.example.demo.dto.coursegroup.CourseGroupResponse;
 import com.example.demo.entity.JCourseGroup;
 import com.example.demo.exception.ConflictException;
-import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseGroupRepository;
-import com.example.demo.repository.JCourseRepository;
-import com.example.demo.repository.JGroupRepository;
+import com.example.demo.validator.EntityValidator;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,23 +18,20 @@ public class CourseGroupServiceImpl implements CourseGroupService {
 
   private final GradeAccessGuard accessGuard;
   private final JCourseGroupRepository courseGroupRepository;
-  private final JCourseRepository courseRepository;
-  private final JGroupRepository groupRepository;
+  private final EntityValidator validator;
 
   public CourseGroupServiceImpl(
       GradeAccessGuard accessGuard,
       JCourseGroupRepository courseGroupRepository,
-      JCourseRepository courseRepository,
-      JGroupRepository groupRepository) {
+      EntityValidator validator) {
     this.accessGuard = accessGuard;
     this.courseGroupRepository = courseGroupRepository;
-    this.courseRepository = courseRepository;
-    this.groupRepository = groupRepository;
+    this.validator = validator;
   }
 
   @Override
   public List<CourseGroupResponse> listGroups(UUID courseId) {
-    requireCourse(courseId);
+    validator.requireCourse(courseId);
     return courseGroupRepository.findByCourseId(courseId).stream().map(this::toResponse).toList();
   }
 
@@ -44,8 +39,8 @@ public class CourseGroupServiceImpl implements CourseGroupService {
   @Transactional
   public CourseGroupResponse assign(UUID courseId, CourseGroupAssignRequest request, Jwt jwt) {
     accessGuard.checkAdminOrTeacherOfCourse(courseId, jwt);
-    requireCourse(courseId);
-    requireGroup(request.groupId());
+    validator.requireCourse(courseId);
+    validator.requireGroup(request.groupId());
     if (courseGroupRepository.findByCourseIdAndGroupId(courseId, request.groupId()).isPresent()) {
       throw new ConflictException(
           "Group " + request.groupId() + " is already associated with course " + courseId);
@@ -70,17 +65,5 @@ public class CourseGroupServiceImpl implements CourseGroupService {
   private CourseGroupResponse toResponse(JCourseGroup assignment) {
     return new CourseGroupResponse(
         assignment.getId(), assignment.getCourseId(), assignment.getGroupId());
-  }
-
-  private void requireCourse(UUID courseId) {
-    if (!courseRepository.existsById(courseId)) {
-      throw new ResourceNotFoundException("Course not found with id: " + courseId);
-    }
-  }
-
-  private void requireGroup(UUID groupId) {
-    if (!groupRepository.existsById(groupId)) {
-      throw new ResourceNotFoundException("Group not found with id: " + groupId);
-    }
   }
 }

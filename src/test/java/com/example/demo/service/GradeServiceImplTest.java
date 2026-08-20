@@ -25,6 +25,7 @@ import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeModificationRepository;
 import com.example.demo.repository.JGradeRepository;
 import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -54,6 +55,9 @@ class GradeServiceImplTest {
     courseRepository = mock(JCourseRepository.class);
     gradeModificationRepository = mock(JGradeModificationRepository.class);
     userRepository = mock(JUserRepository.class);
+    EntityValidator validator =
+        new EntityValidator(
+            courseRepository, null, userRepository, null, examRepository, null, null);
     service =
         new GradeServiceImpl(
             accessGuard,
@@ -62,7 +66,7 @@ class GradeServiceImplTest {
             examRepository,
             courseRepository,
             gradeModificationRepository,
-            userRepository);
+            validator);
   }
 
   @Test

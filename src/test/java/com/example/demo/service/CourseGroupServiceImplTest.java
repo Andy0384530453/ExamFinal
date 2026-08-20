@@ -10,12 +10,15 @@ import static org.mockito.Mockito.when;
 import com.example.demo.config.GradeAccessGuard;
 import com.example.demo.dto.coursegroup.CourseGroupAssignRequest;
 import com.example.demo.dto.coursegroup.CourseGroupResponse;
+import com.example.demo.entity.JCourse;
 import com.example.demo.entity.JCourseGroup;
+import com.example.demo.entity.JGroup;
 import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseGroupRepository;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JGroupRepository;
+import com.example.demo.validator.EntityValidator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,15 +41,15 @@ class CourseGroupServiceImplTest {
     courseGroupRepository = mock(JCourseGroupRepository.class);
     courseRepository = mock(JCourseRepository.class);
     groupRepository = mock(JGroupRepository.class);
-    service =
-        new CourseGroupServiceImpl(
-            accessGuard, courseGroupRepository, courseRepository, groupRepository);
+    EntityValidator validator =
+        new EntityValidator(courseRepository, groupRepository, null, null, null, null, null);
+    service = new CourseGroupServiceImpl(accessGuard, courseGroupRepository, validator);
   }
 
   @Test
   void list_groups_returns_mapped_responses() {
     UUID courseId = UUID.randomUUID();
-    when(courseRepository.existsById(courseId)).thenReturn(true);
+    when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId)));
     JCourseGroup assignment = new JCourseGroup();
     assignment.setId(UUID.randomUUID());
     assignment.setCourseId(courseId);
@@ -75,8 +78,8 @@ class CourseGroupServiceImplTest {
     Jwt jwt = mock(Jwt.class);
     UUID courseId = UUID.randomUUID();
     UUID groupId = UUID.randomUUID();
-    when(courseRepository.existsById(courseId)).thenReturn(true);
-    when(groupRepository.existsById(groupId)).thenReturn(true);
+    when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId)));
+    when(groupRepository.findById(groupId)).thenReturn(Optional.of(group(groupId)));
     when(courseGroupRepository.findByCourseIdAndGroupId(courseId, groupId))
         .thenReturn(Optional.empty());
 
@@ -102,8 +105,8 @@ class CourseGroupServiceImplTest {
     existing.setId(UUID.randomUUID());
     existing.setCourseId(courseId);
     existing.setGroupId(groupId);
-    when(courseRepository.existsById(courseId)).thenReturn(true);
-    when(groupRepository.existsById(groupId)).thenReturn(true);
+    when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId)));
+    when(groupRepository.findById(groupId)).thenReturn(Optional.of(group(groupId)));
     when(courseGroupRepository.findByCourseIdAndGroupId(courseId, groupId))
         .thenReturn(Optional.of(existing));
 
@@ -117,7 +120,7 @@ class CourseGroupServiceImplTest {
   void assign_unknown_course_throws_not_found() {
     Jwt jwt = mock(Jwt.class);
     UUID courseId = UUID.randomUUID();
-    when(courseRepository.existsById(courseId)).thenReturn(false);
+    when(courseRepository.findById(courseId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
             () -> service.assign(courseId, new CourseGroupAssignRequest(UUID.randomUUID()), jwt))
@@ -130,8 +133,8 @@ class CourseGroupServiceImplTest {
     Jwt jwt = mock(Jwt.class);
     UUID courseId = UUID.randomUUID();
     UUID groupId = UUID.randomUUID();
-    when(courseRepository.existsById(courseId)).thenReturn(true);
-    when(groupRepository.existsById(groupId)).thenReturn(false);
+    when(courseRepository.findById(courseId)).thenReturn(Optional.of(course(courseId)));
+    when(groupRepository.findById(groupId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.assign(courseId, new CourseGroupAssignRequest(groupId), jwt))
         .isInstanceOf(ResourceNotFoundException.class)
@@ -167,5 +170,19 @@ class CourseGroupServiceImplTest {
     service.remove(courseId, groupId, jwt);
 
     verify(courseGroupRepository, never()).delete(org.mockito.ArgumentMatchers.any());
+  }
+
+  private static JCourse course(UUID courseId) {
+    JCourse course = new JCourse();
+    course.setId(courseId);
+    course.setRef("C-" + UUID.randomUUID());
+    return course;
+  }
+
+  private static JGroup group(UUID groupId) {
+    JGroup group = new JGroup();
+    group.setId(groupId);
+    group.setRef("GRP-" + UUID.randomUUID());
+    return group;
   }
 }

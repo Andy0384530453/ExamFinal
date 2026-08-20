@@ -7,11 +7,10 @@ import com.example.demo.entity.JPromotion;
 import com.example.demo.entity.JStudentGroup;
 import com.example.demo.entity.JUser;
 import com.example.demo.excel.GraduateExcelGenerator;
-import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JGroupRepository;
-import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JStudentGroupRepository;
 import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -24,31 +23,31 @@ import org.springframework.stereotype.Service;
 @Service
 public class GraduateServiceImpl implements GraduateService {
 
-  private final JPromotionRepository promotionRepository;
   private final JGroupRepository groupRepository;
   private final JStudentGroupRepository studentGroupRepository;
   private final JUserRepository userRepository;
   private final GraduateCalculator graduateCalculator;
   private final GraduateExcelGenerator excelGenerator;
+  private final EntityValidator validator;
 
   public GraduateServiceImpl(
-      JPromotionRepository promotionRepository,
       JGroupRepository groupRepository,
       JStudentGroupRepository studentGroupRepository,
       JUserRepository userRepository,
       GraduateCalculator graduateCalculator,
-      GraduateExcelGenerator excelGenerator) {
-    this.promotionRepository = promotionRepository;
+      GraduateExcelGenerator excelGenerator,
+      EntityValidator validator) {
     this.groupRepository = groupRepository;
     this.studentGroupRepository = studentGroupRepository;
     this.userRepository = userRepository;
     this.graduateCalculator = graduateCalculator;
     this.excelGenerator = excelGenerator;
+    this.validator = validator;
   }
 
   @Override
   public List<GraduateResponse> getGraduates(UUID promotionId) {
-    checkPromotionExists(promotionId);
+    validator.assertPromotionExists(promotionId);
     List<UUID> finishedStudentIds = findFinishedStudentIds(promotionId);
     if (finishedStudentIds.isEmpty()) {
       return List.of();
@@ -65,29 +64,15 @@ public class GraduateServiceImpl implements GraduateService {
 
   @Override
   public GraduatesResponse getGraduatesResponse(UUID promotionId) {
-    JPromotion promotion =
-        promotionRepository
-            .findById(promotionId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Promotion not found with id: " + promotionId));
+    JPromotion promotion = validator.requirePromotion(promotionId);
     return new GraduatesResponse(
         promotion.getId(), promotion.getRef(), promotion.getYear(), getGraduates(promotionId));
   }
 
   @Override
   public byte[] getGraduatesExcel(UUID promotionId) {
-    var promotion =
-        promotionRepository
-            .findById(promotionId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Promotion not found with id: " + promotionId));
+    JPromotion promotion = validator.requirePromotion(promotionId);
     return excelGenerator.generate(promotion, getGraduates(promotionId));
-  }
-
-  private void checkPromotionExists(UUID promotionId) {
-    if (!promotionRepository.existsById(promotionId)) {
-      throw new ResourceNotFoundException("Promotion not found with id: " + promotionId);
-    }
   }
 
   private List<UUID> findFinishedStudentIds(UUID promotionId) {

@@ -1,12 +1,9 @@
 package com.example.demo.config;
 
-import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
 import com.example.demo.enums.Role;
-import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JCourseTeacherRepository;
-import com.example.demo.repository.JExamRepository;
-import com.example.demo.repository.JGradeRepository;
+import com.example.demo.validator.EntityValidator;
 import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,19 +13,16 @@ import org.springframework.stereotype.Component;
 public class GradeAccessGuard {
 
   private final TokenProvider tokenProvider;
-  private final JGradeRepository gradeRepository;
-  private final JExamRepository examRepository;
   private final JCourseTeacherRepository courseTeacherRepository;
+  private final EntityValidator validator;
 
   public GradeAccessGuard(
       TokenProvider tokenProvider,
-      JGradeRepository gradeRepository,
-      JExamRepository examRepository,
-      JCourseTeacherRepository courseTeacherRepository) {
+      JCourseTeacherRepository courseTeacherRepository,
+      EntityValidator validator) {
     this.tokenProvider = tokenProvider;
-    this.gradeRepository = gradeRepository;
-    this.examRepository = examRepository;
     this.courseTeacherRepository = courseTeacherRepository;
+    this.validator = validator;
   }
 
   public void checkAdminOrTeacherOfCourse(UUID courseId, Jwt jwt) {
@@ -44,11 +38,7 @@ public class GradeAccessGuard {
 
   public JGrade checkAdminOrTeacherOfGrade(UUID gradeId, Jwt jwt) {
     requireAdminOrTeacher(jwt);
-    JGrade grade =
-        gradeRepository
-            .findById(gradeId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Grade not found with id: " + gradeId));
+    JGrade grade = validator.requireGrade(gradeId);
     if (isAdmin(jwt)) {
       return grade;
     }
@@ -94,12 +84,6 @@ public class GradeAccessGuard {
   }
 
   private UUID courseIdOfGrade(JGrade grade) {
-    JExam exam =
-        examRepository
-            .findById(grade.getExamId())
-            .orElseThrow(
-                () ->
-                    new ResourceNotFoundException("Exam not found with id: " + grade.getExamId()));
-    return exam.getCourseId();
+    return validator.requireExam(grade.getExamId()).getCourseId();
   }
 }

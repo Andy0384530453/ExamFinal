@@ -18,6 +18,7 @@ import com.example.demo.repository.JGroupRepository;
 import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JStudentGroupRepository;
 import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -43,14 +44,17 @@ class GraduateServiceImplTest {
     userRepository = mock(JUserRepository.class);
     graduateCalculator = mock(GraduateCalculator.class);
     excelGenerator = mock(GraduateExcelGenerator.class);
+    EntityValidator validator =
+        new EntityValidator(
+            null, groupRepository, userRepository, promotionRepository, null, null, null);
     service =
         new GraduateServiceImpl(
-            promotionRepository,
             groupRepository,
             studentGroupRepository,
             userRepository,
             graduateCalculator,
-            excelGenerator);
+            excelGenerator,
+            validator);
   }
 
   @Test

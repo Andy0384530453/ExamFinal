@@ -19,6 +19,7 @@ import com.example.demo.repository.JGradeRepository;
 import com.example.demo.repository.JGroupRepository;
 import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JStudentGroupRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +47,8 @@ class PromotionResultsServiceImplTest {
     examRepository = mock(JExamRepository.class);
     gradeRepository = mock(JGradeRepository.class);
     graduateCalculator = mock(GraduateCalculator.class);
+    EntityValidator validator =
+        new EntityValidator(null, groupRepository, null, promotionRepository, null, null, null);
     service =
         new PromotionResultsServiceImpl(
             promotionRepository,
@@ -54,7 +57,8 @@ class PromotionResultsServiceImplTest {
             courseRepository,
             examRepository,
             gradeRepository,
-            graduateCalculator);
+            graduateCalculator,
+            validator);
   }
 
   @Test

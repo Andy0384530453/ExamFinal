@@ -23,6 +23,7 @@ import com.example.demo.pdf.TranscriptPdfGenerator;
 import com.example.demo.repository.JPromotionRepository;
 import com.example.demo.repository.JTranscriptRepository;
 import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.io.File;
 import java.nio.file.Files;
 import java.time.Instant;
@@ -57,16 +58,18 @@ class TranscriptServiceImplTest {
     transcriptDataBuilder = mock(TranscriptDataBuilder.class);
     pdfGenerator = mock(TranscriptPdfGenerator.class);
     eventProducer = mock(EventProducer.class);
+    EntityValidator validator =
+        new EntityValidator(
+            null, null, userRepository, promotionRepository, null, null, transcriptRepository);
     service =
         new TranscriptServiceImpl(
             accessGuard,
-            userRepository,
-            promotionRepository,
             transcriptRepository,
             new TranscriptMapper(),
             transcriptDataBuilder,
             pdfGenerator,
-            eventProducer);
+            eventProducer,
+            validator);
   }
 
   @Test

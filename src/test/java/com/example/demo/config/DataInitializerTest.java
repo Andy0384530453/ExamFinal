@@ -48,7 +48,7 @@ class DataInitializerTest {
     assertThat(student.getRef()).isEqualTo("STU-001");
     assertThat(student.getFirstName()).isEqualTo("Alice");
     assertThat(student.getLastName()).isEqualTo("Dupont");
-    assertThat(student.getEmail()).isEqualTo("student@test.com");
+    assertThat(student.getEmail()).isEqualTo("hei.andy.100@gmail.com");
     assertThat(student.getPassword()).isEqualTo("encoded-password");
 
     JUser teacher =
@@ -68,7 +68,7 @@ class DataInitializerTest {
 
   @Test
   void run_does_not_save_if_all_users_already_exist() {
-    when(userRepository.findByEmail("student@test.com")).thenReturn(Optional.of(new JUser()));
+    when(userRepository.findByEmail("hei.andy.100@gmail.com")).thenReturn(Optional.of(new JUser()));
     when(userRepository.findByEmail("teacher@test.com")).thenReturn(Optional.of(new JUser()));
     when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(new JUser()));
 
@@ -79,7 +79,7 @@ class DataInitializerTest {
 
   @Test
   void run_seeds_only_missing_users() {
-    when(userRepository.findByEmail("student@test.com")).thenReturn(Optional.empty());
+    when(userRepository.findByEmail("hei.andy.100@gmail.com")).thenReturn(Optional.empty());
     when(userRepository.findByEmail("teacher@test.com")).thenReturn(Optional.of(new JUser()));
     when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(new JUser()));
     when(passwordEncoder.encode("password123")).thenReturn("encoded-password");

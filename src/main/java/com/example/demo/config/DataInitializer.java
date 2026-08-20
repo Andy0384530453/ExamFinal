@@ -32,7 +32,7 @@ public class DataInitializer implements CommandLineRunner {
         "STU-001",
         "Alice",
         "Dupont",
-        "student@test.com",
+        "hei.andy.100@gmail.com",
         "password123",
         Role.STUDENT);
     seedUser(

@@ -78,6 +78,8 @@ public class SecurityConfig {
                 authorize
                     .requestMatchers(HttpMethod.POST, "/login")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/register")
+                    .permitAll()
                     .requestMatchers(HttpMethod.GET, "/promotions")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/promotions/{id}/graduates")

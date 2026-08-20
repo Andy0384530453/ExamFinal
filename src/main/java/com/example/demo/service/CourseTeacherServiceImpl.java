@@ -5,6 +5,7 @@ import com.example.demo.dto.courseteacher.CourseTeacherResponse;
 import com.example.demo.entity.JCourseTeacher;
 import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.mapper.CourseTeacherMapper;
 import com.example.demo.repository.JCourseTeacherRepository;
 import com.example.demo.validator.EntityValidator;
 import java.util.List;
@@ -17,17 +18,23 @@ public class CourseTeacherServiceImpl implements CourseTeacherService {
 
   private final JCourseTeacherRepository courseTeacherRepository;
   private final EntityValidator validator;
+  private final CourseTeacherMapper courseTeacherMapper;
 
   public CourseTeacherServiceImpl(
-      JCourseTeacherRepository courseTeacherRepository, EntityValidator validator) {
+      JCourseTeacherRepository courseTeacherRepository,
+      EntityValidator validator,
+      CourseTeacherMapper courseTeacherMapper) {
     this.courseTeacherRepository = courseTeacherRepository;
     this.validator = validator;
+    this.courseTeacherMapper = courseTeacherMapper;
   }
 
   @Override
   public List<CourseTeacherResponse> listTeachers(UUID courseId) {
     validator.requireCourse(courseId);
-    return courseTeacherRepository.findByCourseId(courseId).stream().map(this::toResponse).toList();
+    return courseTeacherRepository.findByCourseId(courseId).stream()
+        .map(courseTeacherMapper::toResponse)
+        .toList();
   }
 
   @Override
@@ -44,7 +51,7 @@ public class CourseTeacherServiceImpl implements CourseTeacherService {
     assignment.setCourseId(courseId);
     assignment.setTeacherId(request.teacherId());
     courseTeacherRepository.save(assignment);
-    return toResponse(assignment);
+    return courseTeacherMapper.toResponse(assignment);
   }
 
   @Override
@@ -59,10 +66,5 @@ public class CourseTeacherServiceImpl implements CourseTeacherService {
                     new ResourceNotFoundException(
                         "Teacher " + teacherId + " is not assigned to course " + courseId));
     courseTeacherRepository.delete(assignment);
-  }
-
-  private CourseTeacherResponse toResponse(JCourseTeacher assignment) {
-    return new CourseTeacherResponse(
-        assignment.getId(), assignment.getCourseId(), assignment.getTeacherId());
   }
 }

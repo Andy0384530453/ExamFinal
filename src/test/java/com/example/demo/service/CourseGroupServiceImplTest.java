@@ -15,6 +15,7 @@ import com.example.demo.entity.JCourseGroup;
 import com.example.demo.entity.JGroup;
 import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.mapper.CourseGroupMapper;
 import com.example.demo.repository.JCourseGroupRepository;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JGroupRepository;
@@ -43,7 +44,9 @@ class CourseGroupServiceImplTest {
     groupRepository = mock(JGroupRepository.class);
     EntityValidator validator =
         new EntityValidator(courseRepository, groupRepository, null, null, null, null, null);
-    service = new CourseGroupServiceImpl(accessGuard, courseGroupRepository, validator);
+    service =
+        new CourseGroupServiceImpl(
+            accessGuard, courseGroupRepository, validator, new CourseGroupMapper());
   }
 
   @Test

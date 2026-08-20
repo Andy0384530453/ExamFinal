@@ -5,6 +5,7 @@ import com.example.demo.dto.coursegroup.CourseGroupAssignRequest;
 import com.example.demo.dto.coursegroup.CourseGroupResponse;
 import com.example.demo.entity.JCourseGroup;
 import com.example.demo.exception.ConflictException;
+import com.example.demo.mapper.CourseGroupMapper;
 import com.example.demo.repository.JCourseGroupRepository;
 import com.example.demo.validator.EntityValidator;
 import java.util.List;
@@ -19,20 +20,25 @@ public class CourseGroupServiceImpl implements CourseGroupService {
   private final GradeAccessGuard accessGuard;
   private final JCourseGroupRepository courseGroupRepository;
   private final EntityValidator validator;
+  private final CourseGroupMapper courseGroupMapper;
 
   public CourseGroupServiceImpl(
       GradeAccessGuard accessGuard,
       JCourseGroupRepository courseGroupRepository,
-      EntityValidator validator) {
+      EntityValidator validator,
+      CourseGroupMapper courseGroupMapper) {
     this.accessGuard = accessGuard;
     this.courseGroupRepository = courseGroupRepository;
     this.validator = validator;
+    this.courseGroupMapper = courseGroupMapper;
   }
 
   @Override
   public List<CourseGroupResponse> listGroups(UUID courseId) {
     validator.requireCourse(courseId);
-    return courseGroupRepository.findByCourseId(courseId).stream().map(this::toResponse).toList();
+    return courseGroupRepository.findByCourseId(courseId).stream()
+        .map(courseGroupMapper::toResponse)
+        .toList();
   }
 
   @Override
@@ -50,7 +56,7 @@ public class CourseGroupServiceImpl implements CourseGroupService {
     assignment.setCourseId(courseId);
     assignment.setGroupId(request.groupId());
     courseGroupRepository.save(assignment);
-    return toResponse(assignment);
+    return courseGroupMapper.toResponse(assignment);
   }
 
   @Override
@@ -60,10 +66,5 @@ public class CourseGroupServiceImpl implements CourseGroupService {
     courseGroupRepository
         .findByCourseIdAndGroupId(courseId, groupId)
         .ifPresent(courseGroupRepository::delete);
-  }
-
-  private CourseGroupResponse toResponse(JCourseGroup assignment) {
-    return new CourseGroupResponse(
-        assignment.getId(), assignment.getCourseId(), assignment.getGroupId());
   }
 }

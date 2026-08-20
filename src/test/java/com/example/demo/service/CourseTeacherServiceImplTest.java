@@ -15,6 +15,7 @@ import com.example.demo.entity.JUser;
 import com.example.demo.enums.Role;
 import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.mapper.CourseTeacherMapper;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JCourseTeacherRepository;
 import com.example.demo.repository.JUserRepository;
@@ -40,7 +41,8 @@ class CourseTeacherServiceImplTest {
     userRepository = mock(JUserRepository.class);
     EntityValidator validator =
         new EntityValidator(courseRepository, null, userRepository, null, null, null, null);
-    service = new CourseTeacherServiceImpl(courseTeacherRepository, validator);
+    service =
+        new CourseTeacherServiceImpl(courseTeacherRepository, validator, new CourseTeacherMapper());
   }
 
   @Test

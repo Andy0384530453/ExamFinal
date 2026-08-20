@@ -11,12 +11,12 @@ import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
 import com.example.demo.entity.JGradeModification;
 import com.example.demo.exception.ConflictException;
-import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.mapper.GradeMapper;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeModificationRepository;
 import com.example.demo.repository.JGradeRepository;
-import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +35,8 @@ public class GradeServiceImpl implements GradeService {
   private final JExamRepository examRepository;
   private final JCourseRepository courseRepository;
   private final JGradeModificationRepository gradeModificationRepository;
-  private final JUserRepository userRepository;
+  private final EntityValidator validator;
+  private final GradeMapper gradeMapper;
 
   public GradeServiceImpl(
       GradeAccessGuard accessGuard,
@@ -44,22 +45,24 @@ public class GradeServiceImpl implements GradeService {
       JExamRepository examRepository,
       JCourseRepository courseRepository,
       JGradeModificationRepository gradeModificationRepository,
-      JUserRepository userRepository) {
+      EntityValidator validator,
+      GradeMapper gradeMapper) {
     this.accessGuard = accessGuard;
     this.tokenProvider = tokenProvider;
     this.gradeRepository = gradeRepository;
     this.examRepository = examRepository;
     this.courseRepository = courseRepository;
     this.gradeModificationRepository = gradeModificationRepository;
-    this.userRepository = userRepository;
+    this.validator = validator;
+    this.gradeMapper = gradeMapper;
   }
 
   @Override
   @Transactional
   public GradeResponse createGrade(UUID courseId, GradeCreateRequest request, Jwt jwt) {
     accessGuard.checkAdminOrTeacherOfCourse(courseId, jwt);
-    requireStudent(request.studentId());
-    JExam exam = requireExam(request.examId());
+    validator.assertStudentExists(request.studentId());
+    JExam exam = validator.requireExam(request.examId());
     if (!courseId.equals(exam.getCourseId())) {
       throw new IllegalArgumentException(
           "Exam " + exam.getId() + " does not belong to course " + courseId);
@@ -86,8 +89,8 @@ public class GradeServiceImpl implements GradeService {
     grade.setModifiedBy(userId);
     gradeRepository.save(grade);
 
-    String courseTitle = courseTitle(courseId);
-    return toResponse(grade, courseTitle, exam.getId(), exam.getRef());
+    String courseTitle = validator.requireCourse(courseId).getTitle();
+    return gradeMapper.toResponse(grade, courseTitle, exam.getId(), exam.getRef());
   }
 
   @Override
@@ -100,11 +103,12 @@ public class GradeServiceImpl implements GradeService {
     }
     Map<UUID, String> examRefs =
         exams.stream().collect(Collectors.toMap(JExam::getId, JExam::getRef));
-    String courseTitle = courseTitle(courseId);
+    String courseTitle = validator.requireCourse(courseId).getTitle();
     return gradeRepository.findByExamIdIn(examIds).stream()
         .map(
             grade ->
-                toResponse(grade, courseTitle, grade.getExamId(), examRefs.get(grade.getExamId())))
+                gradeMapper.toResponse(
+                    grade, courseTitle, grade.getExamId(), examRefs.get(grade.getExamId())))
         .toList();
   }
 
@@ -127,7 +131,7 @@ public class GradeServiceImpl implements GradeService {
         .map(
             grade -> {
               JExam exam = examsById.get(grade.getExamId());
-              return toResponse(
+              return gradeMapper.toResponse(
                   grade, courseTitles.get(exam.getCourseId()), grade.getExamId(), exam.getRef());
             })
         .toList();
@@ -140,8 +144,8 @@ public class GradeServiceImpl implements GradeService {
     if (Double.compare(grade.getValue(), request.value()) == 0) {
       throw new IllegalArgumentException("Grade already has value " + request.value());
     }
-    JExam exam = requireExam(grade.getExamId());
-    String courseTitle = courseTitle(exam.getCourseId());
+    JExam exam = validator.requireExam(grade.getExamId());
+    String courseTitle = validator.requireCourse(exam.getCourseId()).getTitle();
     UUID userId = UUID.fromString(tokenProvider.getUserId(jwt));
     Instant now = Instant.now();
 
@@ -160,7 +164,7 @@ public class GradeServiceImpl implements GradeService {
     grade.setModifiedBy(userId);
     gradeRepository.save(grade);
 
-    return toResponse(grade, courseTitle, exam.getId(), exam.getRef());
+    return gradeMapper.toResponse(grade, courseTitle, exam.getId(), exam.getRef());
   }
 
   @Override
@@ -176,37 +180,5 @@ public class GradeServiceImpl implements GradeService {
                     m.getModifiedAt(),
                     m.getModifiedBy()))
         .toList();
-  }
-
-  private GradeResponse toResponse(JGrade grade, String courseTitle, UUID examId, String examRef) {
-    return new GradeResponse(
-        grade.getId(),
-        grade.getStudentId(),
-        examId,
-        examRef,
-        courseTitle,
-        grade.getValue(),
-        grade.getComment(),
-        grade.getModifiedAt(),
-        grade.getModifiedBy());
-  }
-
-  private void requireStudent(UUID studentId) {
-    if (!userRepository.existsById(studentId)) {
-      throw new ResourceNotFoundException("Student not found with id: " + studentId);
-    }
-  }
-
-  private String courseTitle(UUID courseId) {
-    return courseRepository
-        .findById(courseId)
-        .map(JCourse::getTitle)
-        .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + courseId));
-  }
-
-  private JExam requireExam(UUID examId) {
-    return examRepository
-        .findById(examId)
-        .orElseThrow(() -> new ResourceNotFoundException("Exam not found with id: " + examId));
   }
 }

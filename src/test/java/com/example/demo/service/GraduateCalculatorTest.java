@@ -20,7 +20,7 @@ class GraduateCalculatorTest {
   @BeforeEach
   void setUp() {
     transcriptDataBuilder = mock(TranscriptDataBuilder.class);
-    calculator = new GraduateCalculator(transcriptDataBuilder);
+    calculator = new GraduateCalculator(transcriptDataBuilder, new Rounder());
   }
 
   @Test

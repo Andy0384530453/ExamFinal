@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.demo.conf.FacadeIT;
 import com.example.demo.config.TokenProvider;
-import com.example.demo.dto.course.CourseGroupAssignmentRequest;
-import com.example.demo.dto.course.CourseGroupResponse;
-import com.example.demo.dto.course.CourseTeacherResponse;
-import com.example.demo.dto.course.TeacherAssignmentRequest;
+import com.example.demo.dto.coursegroup.CourseGroupAssignRequest;
+import com.example.demo.dto.coursegroup.CourseGroupResponse;
+import com.example.demo.dto.courseteacher.CourseTeacherAssignRequest;
+import com.example.demo.dto.courseteacher.CourseTeacherResponse;
 import com.example.demo.entity.JCourse;
 import com.example.demo.entity.JCourseTeacher;
 import com.example.demo.entity.JGroup;
@@ -220,7 +220,7 @@ class CourseAssignmentControllerIT extends FacadeIT {
     return restTemplate.exchange(
         "/courses/" + courseId + "/teachers",
         HttpMethod.POST,
-        new HttpEntity<>(new TeacherAssignmentRequest(teacherId), headers),
+        new HttpEntity<>(new CourseTeacherAssignRequest(teacherId), headers),
         CourseTeacherResponse.class);
   }
 
@@ -231,7 +231,7 @@ class CourseAssignmentControllerIT extends FacadeIT {
     return restTemplate.exchange(
         "/courses/" + courseId + "/teachers",
         HttpMethod.POST,
-        new HttpEntity<>(new TeacherAssignmentRequest(teacherId), headers),
+        new HttpEntity<>(new CourseTeacherAssignRequest(teacherId), headers),
         ErrorResponse.class);
   }
 
@@ -263,7 +263,7 @@ class CourseAssignmentControllerIT extends FacadeIT {
     return restTemplate.exchange(
         "/courses/" + courseId + "/groups",
         HttpMethod.POST,
-        new HttpEntity<>(new CourseGroupAssignmentRequest(groupId), headers),
+        new HttpEntity<>(new CourseGroupAssignRequest(groupId), headers),
         CourseGroupResponse.class);
   }
 
@@ -274,7 +274,7 @@ class CourseAssignmentControllerIT extends FacadeIT {
     return restTemplate.exchange(
         "/courses/" + courseId + "/groups",
         HttpMethod.POST,
-        new HttpEntity<>(new CourseGroupAssignmentRequest(groupId), headers),
+        new HttpEntity<>(new CourseGroupAssignRequest(groupId), headers),
         ErrorResponse.class);
   }
 

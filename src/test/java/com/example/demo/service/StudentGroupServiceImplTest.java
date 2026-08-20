@@ -7,15 +7,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.demo.config.AccessGuard;
 import com.example.demo.config.TokenProvider;
 import com.example.demo.dto.group.StudentGroupChangeRequest;
 import com.example.demo.dto.group.StudentGroupResponse;
+import com.example.demo.entity.JGroup;
 import com.example.demo.entity.JStudentGroup;
 import com.example.demo.enums.Role;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JGroupRepository;
 import com.example.demo.repository.JStudentGroupRepository;
 import com.example.demo.repository.JUserRepository;
+import com.example.demo.validator.EntityValidator;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -42,9 +45,11 @@ class StudentGroupServiceImplTest {
     userRepository = mock(JUserRepository.class);
     groupRepository = mock(JGroupRepository.class);
     studentGroupRepository = mock(JStudentGroupRepository.class);
+    EntityValidator validator =
+        new EntityValidator(null, groupRepository, userRepository, null, null, null, null);
     service =
         new StudentGroupServiceImpl(
-            tokenProvider, userRepository, groupRepository, studentGroupRepository);
+            new AccessGuard(tokenProvider), studentGroupRepository, validator);
   }
 
   @Test
@@ -113,7 +118,7 @@ class StudentGroupServiceImplTest {
     UUID newGroupId = UUID.randomUUID();
     JStudentGroup current = membership(studentId, oldGroupId);
     when(userRepository.existsById(studentId)).thenReturn(true);
-    when(groupRepository.existsById(newGroupId)).thenReturn(true);
+    when(groupRepository.findById(newGroupId)).thenReturn(Optional.of(group(newGroupId)));
     when(studentGroupRepository.findByStudentIdAndEndDateIsNull(studentId))
         .thenReturn(Optional.of(current));
 
@@ -136,7 +141,7 @@ class StudentGroupServiceImplTest {
     UUID studentId = UUID.randomUUID();
     UUID newGroupId = UUID.randomUUID();
     when(userRepository.existsById(studentId)).thenReturn(true);
-    when(groupRepository.existsById(newGroupId)).thenReturn(true);
+    when(groupRepository.findById(newGroupId)).thenReturn(Optional.of(group(newGroupId)));
     when(studentGroupRepository.findByStudentIdAndEndDateIsNull(studentId))
         .thenReturn(Optional.empty());
 
@@ -153,7 +158,7 @@ class StudentGroupServiceImplTest {
     UUID newGroupId = UUID.randomUUID();
     LocalDate startDate = LocalDate.of(2025, 9, 1);
     when(userRepository.existsById(studentId)).thenReturn(true);
-    when(groupRepository.existsById(newGroupId)).thenReturn(true);
+    when(groupRepository.findById(newGroupId)).thenReturn(Optional.of(group(newGroupId)));
     when(studentGroupRepository.findByStudentIdAndEndDateIsNull(studentId))
         .thenReturn(Optional.empty());
 
@@ -182,7 +187,7 @@ class StudentGroupServiceImplTest {
     UUID studentId = UUID.randomUUID();
     UUID groupId = UUID.randomUUID();
     when(userRepository.existsById(studentId)).thenReturn(true);
-    when(groupRepository.existsById(groupId)).thenReturn(false);
+    when(groupRepository.findById(groupId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
             () ->
@@ -190,6 +195,13 @@ class StudentGroupServiceImplTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Group not found");
     verify(studentGroupRepository, never()).save(org.mockito.ArgumentMatchers.any());
+  }
+
+  private static JGroup group(UUID groupId) {
+    JGroup group = new JGroup();
+    group.setId(groupId);
+    group.setRef("GRP-" + UUID.randomUUID());
+    return group;
   }
 
   private static JStudentGroup membership(UUID studentId, UUID groupId) {

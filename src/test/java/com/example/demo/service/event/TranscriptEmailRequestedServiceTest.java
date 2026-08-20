@@ -22,6 +22,7 @@ import com.example.demo.pdf.TranscriptPdfGenerator;
 import com.example.demo.repository.JTranscriptRepository;
 import com.example.demo.repository.JUserRepository;
 import com.example.demo.service.TranscriptDataBuilder;
+import com.example.demo.validator.EntityValidator;
 import java.io.File;
 import java.net.URL;
 import java.time.Duration;
@@ -51,15 +52,17 @@ class TranscriptEmailRequestedServiceTest {
     pdfGenerator = mock(TranscriptPdfGenerator.class);
     bucketComponent = mock(BucketComponent.class);
     mailer = mock(Mailer.class);
+    EntityValidator validator =
+        new EntityValidator(null, null, userRepository, null, null, null, transcriptRepository);
     service =
         new TranscriptEmailRequestedService(
             transcriptRepository,
-            userRepository,
             transcriptDataBuilder,
             pdfGenerator,
             bucketComponent,
             new TranscriptMailComposer(),
-            mailer);
+            mailer,
+            validator);
   }
 
   @Test

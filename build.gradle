@@ -134,6 +134,7 @@ dependencies {
     implementation 'software.amazon.awssdk:core:2.21.40'
 
     implementation 'org.springframework.boot:spring-boot-starter-mail:3.2.2'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
 
     implementation 'org.apache.tika:tika-core:2.9.1'
 

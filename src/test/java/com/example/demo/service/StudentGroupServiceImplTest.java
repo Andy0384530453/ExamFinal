@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.demo.config.AccessGuard;
 import com.example.demo.config.TokenProvider;
 import com.example.demo.dto.group.StudentGroupChangeRequest;
 import com.example.demo.dto.group.StudentGroupResponse;
@@ -46,7 +47,9 @@ class StudentGroupServiceImplTest {
     studentGroupRepository = mock(JStudentGroupRepository.class);
     EntityValidator validator =
         new EntityValidator(null, groupRepository, userRepository, null, null, null, null);
-    service = new StudentGroupServiceImpl(tokenProvider, studentGroupRepository, validator);
+    service =
+        new StudentGroupServiceImpl(
+            new AccessGuard(tokenProvider), studentGroupRepository, validator);
   }
 
   @Test

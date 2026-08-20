@@ -39,7 +39,9 @@ class GradeAccessGuardTest {
     courseTeacherRepository = mock(JCourseTeacherRepository.class);
     EntityValidator validator =
         new EntityValidator(null, null, null, null, examRepository, gradeRepository, null);
-    guard = new GradeAccessGuard(tokenProvider, courseTeacherRepository, validator);
+    guard =
+        new GradeAccessGuard(
+            tokenProvider, new AccessGuard(tokenProvider), courseTeacherRepository, validator);
   }
 
   @Test

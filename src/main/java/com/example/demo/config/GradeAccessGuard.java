@@ -13,14 +13,17 @@ import org.springframework.stereotype.Component;
 public class GradeAccessGuard {
 
   private final TokenProvider tokenProvider;
+  private final AccessGuard accessGuard;
   private final JCourseTeacherRepository courseTeacherRepository;
   private final EntityValidator validator;
 
   public GradeAccessGuard(
       TokenProvider tokenProvider,
+      AccessGuard accessGuard,
       JCourseTeacherRepository courseTeacherRepository,
       EntityValidator validator) {
     this.tokenProvider = tokenProvider;
+    this.accessGuard = accessGuard;
     this.courseTeacherRepository = courseTeacherRepository;
     this.validator = validator;
   }
@@ -50,18 +53,8 @@ public class GradeAccessGuard {
   }
 
   public void checkAdminOrStudentSelf(UUID studentId, Jwt jwt) {
-    String role = tokenProvider.getRole(jwt);
-    if (Role.ADMIN.name().equals(role)) {
-      return;
-    }
-    if (Role.STUDENT.name().equals(role)) {
-      UUID authenticatedId = userId(jwt);
-      if (!authenticatedId.equals(studentId)) {
-        throw new AccessDeniedException("A student can only access their own grades");
-      }
-      return;
-    }
-    throw new AccessDeniedException("Access denied: insufficient role");
+    accessGuard.checkAdminOrStudentSelf(
+        studentId, jwt, "A student can only access their own grades");
   }
 
   private void requireAdminOrTeacher(Jwt jwt) {

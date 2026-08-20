@@ -21,7 +21,7 @@ class TranscriptAccessGuardTest {
   @BeforeEach
   void setUp() {
     tokenProvider = mock(TokenProvider.class);
-    guard = new TranscriptAccessGuard(tokenProvider);
+    guard = new TranscriptAccessGuard(new AccessGuard(tokenProvider));
   }
 
   @Test

@@ -76,6 +76,8 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             authorize ->
                 authorize
+                    .requestMatchers(HttpMethod.POST, "/login")
+                    .permitAll()
                     .requestMatchers(HttpMethod.GET, "/promotions")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/promotions/{id}/graduates")

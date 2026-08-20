@@ -57,7 +57,7 @@ class PromotionResultsServiceImplTest {
             courseRepository,
             examRepository,
             gradeRepository,
-            graduateCalculator,
+            new PromotionResultsCalculator(graduateCalculator, new Rounder()),
             validator);
   }
 

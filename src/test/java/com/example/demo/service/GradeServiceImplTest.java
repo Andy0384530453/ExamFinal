@@ -20,6 +20,7 @@ import com.example.demo.entity.JGrade;
 import com.example.demo.entity.JGradeModification;
 import com.example.demo.exception.ConflictException;
 import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.mapper.GradeMapper;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeModificationRepository;
@@ -66,7 +67,8 @@ class GradeServiceImplTest {
             examRepository,
             courseRepository,
             gradeModificationRepository,
-            validator);
+            validator,
+            new GradeMapper());
   }
 
   @Test

@@ -11,6 +11,7 @@ import com.example.demo.entity.JExam;
 import com.example.demo.entity.JGrade;
 import com.example.demo.entity.JGradeModification;
 import com.example.demo.exception.ConflictException;
+import com.example.demo.mapper.GradeMapper;
 import com.example.demo.repository.JCourseRepository;
 import com.example.demo.repository.JExamRepository;
 import com.example.demo.repository.JGradeModificationRepository;
@@ -35,6 +36,7 @@ public class GradeServiceImpl implements GradeService {
   private final JCourseRepository courseRepository;
   private final JGradeModificationRepository gradeModificationRepository;
   private final EntityValidator validator;
+  private final GradeMapper gradeMapper;
 
   public GradeServiceImpl(
       GradeAccessGuard accessGuard,
@@ -43,7 +45,8 @@ public class GradeServiceImpl implements GradeService {
       JExamRepository examRepository,
       JCourseRepository courseRepository,
       JGradeModificationRepository gradeModificationRepository,
-      EntityValidator validator) {
+      EntityValidator validator,
+      GradeMapper gradeMapper) {
     this.accessGuard = accessGuard;
     this.tokenProvider = tokenProvider;
     this.gradeRepository = gradeRepository;
@@ -51,6 +54,7 @@ public class GradeServiceImpl implements GradeService {
     this.courseRepository = courseRepository;
     this.gradeModificationRepository = gradeModificationRepository;
     this.validator = validator;
+    this.gradeMapper = gradeMapper;
   }
 
   @Override
@@ -86,7 +90,7 @@ public class GradeServiceImpl implements GradeService {
     gradeRepository.save(grade);
 
     String courseTitle = validator.requireCourse(courseId).getTitle();
-    return toResponse(grade, courseTitle, exam.getId(), exam.getRef());
+    return gradeMapper.toResponse(grade, courseTitle, exam.getId(), exam.getRef());
   }
 
   @Override
@@ -103,7 +107,8 @@ public class GradeServiceImpl implements GradeService {
     return gradeRepository.findByExamIdIn(examIds).stream()
         .map(
             grade ->
-                toResponse(grade, courseTitle, grade.getExamId(), examRefs.get(grade.getExamId())))
+                gradeMapper.toResponse(
+                    grade, courseTitle, grade.getExamId(), examRefs.get(grade.getExamId())))
         .toList();
   }
 
@@ -126,7 +131,7 @@ public class GradeServiceImpl implements GradeService {
         .map(
             grade -> {
               JExam exam = examsById.get(grade.getExamId());
-              return toResponse(
+              return gradeMapper.toResponse(
                   grade, courseTitles.get(exam.getCourseId()), grade.getExamId(), exam.getRef());
             })
         .toList();
@@ -159,7 +164,7 @@ public class GradeServiceImpl implements GradeService {
     grade.setModifiedBy(userId);
     gradeRepository.save(grade);
 
-    return toResponse(grade, courseTitle, exam.getId(), exam.getRef());
+    return gradeMapper.toResponse(grade, courseTitle, exam.getId(), exam.getRef());
   }
 
   @Override
@@ -175,18 +180,5 @@ public class GradeServiceImpl implements GradeService {
                     m.getModifiedAt(),
                     m.getModifiedBy()))
         .toList();
-  }
-
-  private GradeResponse toResponse(JGrade grade, String courseTitle, UUID examId, String examRef) {
-    return new GradeResponse(
-        grade.getId(),
-        grade.getStudentId(),
-        examId,
-        examRef,
-        courseTitle,
-        grade.getValue(),
-        grade.getComment(),
-        grade.getModifiedAt(),
-        grade.getModifiedBy());
   }
 }

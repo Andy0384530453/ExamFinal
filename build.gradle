@@ -114,7 +114,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.2.2'
     implementation 'org.flywaydb:flyway-core:9.22.3'
     testImplementation 'org.testcontainers:testcontainers-postgresql:2.0.2'
-    testImplementation 'org.testcontainers:testcontainers-localstack:2.0.2'
     implementation 'org.postgresql:postgresql:42.6.0'
     implementation 'org.hibernate.orm:hibernate-community-dialects:6.4.3.Final'
 
@@ -133,8 +132,10 @@ dependencies {
     implementation 'software.amazon.awssdk:ses:2.21.40'
     implementation 'software.amazon.awssdk:core:2.21.40'
 
-    implementation 'org.springframework.boot:spring-boot-starter-mail:3.2.2'
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
+    implementation 'jakarta.mail:jakarta.mail-api:2.1.2'
+    implementation 'jakarta.activation:jakarta.activation-api:2.1.2'
+    implementation 'com.sun.mail:jakarta.mail:2.0.1'
+    implementation 'com.sun.activation:jakarta.activation:2.0.1'
 
     implementation 'org.apache.tika:tika-core:2.9.1'
 
@@ -151,14 +152,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.2'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.2'
     testImplementation 'org.junit-pioneer:junit-pioneer:2.2.0'
-    testImplementation 'org.apache.commons:commons-lang3:3.18.0'
 
-    implementation 'org.springframework.boot:spring-boot-starter-validation:3.2.2'
-    implementation 'org.springframework.boot:spring-boot-starter-security:3.2.2'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.2.2'
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.2.2'
-    implementation 'org.apache.poi:poi:5.2.5'
-    implementation 'org.apache.poi:poi-ooxml:5.2.5'
-    implementation 'com.github.librepdf:openpdf:2.0.3'
+
 
 }

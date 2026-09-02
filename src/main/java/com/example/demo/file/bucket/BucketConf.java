@@ -1,9 +1,8 @@
 package com.example.demo.file.bucket;
 
 import com.example.demo.PojaGenerated;
-import java.net.URI;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.regions.Region;
@@ -14,7 +13,6 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 @PojaGenerated
 @Configuration
-@Slf4j
 public class BucketConf {
 
   @Getter private final String bucketName;
@@ -22,39 +20,16 @@ public class BucketConf {
   @Getter private final S3Presigner s3Presigner;
   @Getter private final S3Client s3Client;
 
+  @SneakyThrows
   public BucketConf(
-      @Value("eu-west-3") String regionString,
-      @Value("${aws.s3.bucket}") String bucketName,
-      @Value("${aws.s3.endpoint:}") String s3Endpoint) {
+      @Value("eu-west-3") String regionString, @Value("${aws.s3.bucket}") String bucketName) {
     this.bucketName = bucketName;
     var region = Region.of(regionString);
-    final URI endpointOverride =
-        (s3Endpoint != null && !s3Endpoint.isBlank()) ? URI.create(s3Endpoint) : null;
-    if (endpointOverride != null) {
-      log.info("Using S3 endpoint override: {}", endpointOverride);
-    }
     this.s3TransferManager =
         S3TransferManager.builder()
-            .s3Client(
-                S3AsyncClient.crtBuilder()
-                    .region(region)
-                    .applyMutation(
-                        b -> {
-                          if (endpointOverride != null) {
-                            b.endpointOverride(endpointOverride);
-                          }
-                        })
-                    .build())
+            .s3Client(S3AsyncClient.crtBuilder().region(region).build())
             .build();
-    var presignerBuilder = S3Presigner.builder().region(region);
-    if (endpointOverride != null) {
-      presignerBuilder.endpointOverride(endpointOverride);
-    }
-    this.s3Presigner = presignerBuilder.build();
-    var s3ClientBuilder = S3Client.builder().region(region);
-    if (endpointOverride != null) {
-      s3ClientBuilder.endpointOverride(endpointOverride);
-    }
-    this.s3Client = s3ClientBuilder.build();
+    this.s3Presigner = S3Presigner.builder().region(region).build();
+    this.s3Client = S3Client.builder().region(region).build();
   }
 }
